@@ -1,0 +1,598 @@
+---
+title: "Simulating transcriptional bursting with buRst"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Simulating transcriptional bursting with buRst}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Overview
+
+In addition to fitting transcriptional bursting parameters, `buRst` can simulate RNA count data under a transcriptional bursting model.
+
+Simulation is useful for:
+
+* exploring how burst frequency and burst size affect RNA count distributions;
+* generating data with known ground-truth parameters;
+* validating parameter inference;
+* testing whether changes in burst frequency and burst size can be recovered between conditions.
+
+The main simulation function is `simulateBursting()`.
+
+In this vignette, we first simulate data from known bursting parameters. We then construct a two-condition simulation with controlled changes in burst frequency and burst size and finally re-fit the simulated data with `buRst` to compare the inferred parameters with the known simulation truth.
+
+## Loading the packages
+
+```{r}
+library(buRst)
+library(grandR)
+library(dplyr)
+```
+
+## Model parameters
+
+Simulations in `buRst` are parameterized by three gene-specific quantities:
+
+* `km`: burst frequency;
+* `B`: burst size;
+* `d`: RNA degradation rate.
+
+Each simulated gene is therefore associated with a parameter triplet
+
+$$
+(k_m, B, d).
+$$
+
+For multiple genes, these parameters are supplied as vectors of equal length.
+
+For example:
+
+```{r, eval = FALSE}
+kms <- c(0.5, 1, 2)
+Bs  <- c(2, 5, 10)
+ds  <- c(0.1, 0.2, 0.15)
+
+genes <- c(
+  "gene_A",
+  "gene_B",
+  "gene_C"
+)
+```
+
+The parameters can either be chosen directly or obtained from fits to experimental data.
+
+## Simulating a single condition
+
+A single condition can be simulated using `simulateBursting()`:
+
+```{r, eval = FALSE}
+sim <- simulateBursting(
+  kms = kms,
+  ds = ds,
+  Bs = Bs,
+  gene.info = genes,
+  t.end = 2,
+  condition = "sim",
+  no.cells = 100,
+  parallel = FALSE,
+  ntr.sim = TRUE,
+  burstMCMC = TRUE,
+  fit.beta = TRUE,
+  seed = 1234
+)
+```
+
+Here, `kms`, `Bs`, and `ds` contain the burst frequency, burst size, and degradation rate for each gene.
+
+The argument `no.cells` determines the number of cells to simulate, while `condition` provides the condition name used in the resulting object.
+
+For larger simulations, parallel processing can be enabled using `parallel = TRUE` and `ncores`.
+
+## Simulating from experimentally fitted parameters
+
+A useful application is to use parameters inferred from experimental data as the basis for simulation.
+
+Suppose that bursting parameters have previously been estimated using `run_kinetics_batch()`:
+
+```{r, eval = FALSE}
+out <- readRDS("bursting_fits.rds")
+```
+
+High-confidence fits can first be selected:
+
+```{r, eval = FALSE}
+fit_ref <- out$fits %>%
+  filter(
+    fit_cond == "A549 0h",
+    !id_flag %in% c(
+      "bad_hessian",
+      "strong_tradeoff"
+    )
+  )
+```
+
+The fitted parameters can then be supplied directly to `simulateBursting()`:
+
+```{r, eval = FALSE}
+sim <- simulateBursting(
+  kms = fit_ref$km_hat,
+  ds = fit_ref$d_hat,
+  Bs = fit_ref$B_hat,
+  gene.info = fit_ref$gene,
+  t.end = 2,
+  condition = "sim",
+  no.cells = 1151,
+  parallel = TRUE,
+  ntr.sim = TRUE,
+  burstMCMC = TRUE,
+  fit.beta = TRUE,
+  ncores = 4,
+  seed = 1234,
+  output_prefix = "sim_reference"
+)
+```
+
+This generates simulated data using gene-specific parameter combinations estimated from real data.
+
+## Simulating changes in transcriptional bursting
+
+For method validation, we can start from a reference parameter set and introduce known changes in burst frequency, burst size, or both.
+
+This gives us a known ground truth against which parameter estimates obtained from the simulated data can later be compared.
+
+### Defining a reference state
+
+Assume that `fit_ref` contains fitted parameters for a steady-state reference condition.
+
+```{r, eval = FALSE}
+truth <- fit_ref %>%
+  transmute(
+    gene,
+    km_0 = km_hat,
+    B_0 = B_hat,
+    d_0 = d_hat
+  )
+```
+
+The suffix `_0` denotes the reference condition.
+
+### Defining perturbations
+
+Changes in burst frequency and burst size can conveniently be expressed as log2 fold changes.
+
+For example, we can define perturbations of different magnitudes:
+
+```{r, eval = FALSE}
+magnitudes <- c(0.5, 1, 2)
+```
+
+We then construct several types of regulatory changes.
+
+```{r, eval = FALSE}
+pert_none <- tibble::tibble(
+  true_lfc_km = 0,
+  true_lfc_B = 0,
+  true_class = "none"
+)
+
+pert_freq <- tibble::tibble(
+  true_lfc_km = c(-magnitudes, magnitudes),
+  true_lfc_B = 0,
+  true_class = "freq_only"
+)
+
+pert_size <- tibble::tibble(
+  true_lfc_km = 0,
+  true_lfc_B = c(-magnitudes, magnitudes),
+  true_class = "size_only"
+)
+
+pert_both_same <- dplyr::bind_rows(
+  tibble::tibble(
+    true_lfc_km = magnitudes,
+    true_lfc_B = magnitudes,
+    true_class = "both_same"
+  ),
+  tibble::tibble(
+    true_lfc_km = -magnitudes,
+    true_lfc_B = -magnitudes,
+    true_class = "both_same"
+  )
+)
+
+pert_both_opposite <- dplyr::bind_rows(
+  tibble::tibble(
+    true_lfc_km = magnitudes,
+    true_lfc_B = -magnitudes,
+    true_class = "both_opposite"
+  ),
+  tibble::tibble(
+    true_lfc_km = -magnitudes,
+    true_lfc_B = magnitudes,
+    true_class = "both_opposite"
+  )
+)
+
+perturbations <- dplyr::bind_rows(
+  pert_none,
+  pert_freq,
+  pert_size,
+  pert_both_same,
+  pert_both_opposite
+) %>%
+  mutate(
+    perturbation_id = row_number()
+  )
+```
+
+The resulting perturbation classes represent:
+
+* no change;
+* changes in burst frequency only;
+* changes in burst size only;
+* changes in both parameters in the same direction;
+* changes in burst frequency and burst size in opposite directions.
+
+### Assigning perturbations to genes
+
+The perturbations can then be distributed approximately evenly across genes.
+
+```{r, eval = FALSE}
+set.seed(1001)
+
+assignment <- rep(
+  perturbations$perturbation_id,
+  length.out = nrow(fit_ref)
+)
+
+assignment <- sample(assignment)
+```
+
+The complete simulation truth is constructed by combining the assigned perturbation with the reference parameters:
+
+```{r, eval = FALSE}
+truth <- fit_ref %>%
+  transmute(
+    gene,
+    km_0 = km_hat,
+    B_0 = B_hat,
+    d_0 = d_hat,
+    perturbation_id = assignment
+  ) %>%
+  left_join(
+    perturbations,
+    by = "perturbation_id"
+  ) %>%
+  mutate(
+    km_2 = km_0 * 2^true_lfc_km,
+    B_2 = B_0 * 2^true_lfc_B,
+
+    # degradation is kept unchanged
+    d_2 = d_0
+  )
+```
+
+For each gene, `truth` now contains the parameters used for both simulated conditions as well as the exact changes introduced between them.
+
+## Simulating the reference condition
+
+The reference condition is simulated using the original parameter estimates:
+
+```{r, eval = FALSE}
+data_0h <- simulateBursting(
+  kms = truth$km_0,
+  ds = truth$d_0,
+  Bs = truth$B_0,
+  gene.info = truth$gene,
+  t.end = 2,
+  condition = "sim_0",
+  no.cells = 1151,
+  parallel = TRUE,
+  ntr.sim = TRUE,
+  burstMCMC = TRUE,
+  fit.beta = FALSE,
+  ncores = 4,
+  seed = 1234,
+  output_prefix = "sim_ref"
+)
+```
+
+This represents the transcriptional state before the simulated perturbation.
+
+## Simulating the perturbed condition
+
+The perturbed condition is then simulated using the modified parameters.
+
+Importantly, the simulated reference counts are used as the initial state:
+
+```{r, eval = FALSE}
+data_2h <- simulateBursting(
+  kms = truth$km_2,
+  ds = truth$d_2,
+  Bs = truth$B_2,
+  gene.info = truth$gene,
+  t.end = 2,
+  tp.label = 2,
+  steady = FALSE,
+  init = as.matrix(
+    data_0h$data$count
+  ),
+  condition = "sim_2",
+  no.cells = 1151,
+  parallel = TRUE,
+  ntr.sim = TRUE,
+  burstMCMC = TRUE,
+  fit.beta = FALSE,
+  ncores = 4,
+  seed = 1234,
+  output_prefix = "sim_perturbed"
+)
+```
+
+The combination of
+
+```{r, eval = FALSE}
+steady = FALSE
+```
+
+and
+
+```{r, eval = FALSE}
+init = as.matrix(data_0h$data$count)
+```
+
+means that the second condition evolves from the simulated reference state rather than being generated independently from a new steady state.
+
+This mimics a time-course experiment in which transcriptional parameters change between a reference and a later condition.
+
+## Recovering known perturbations from simulated data
+
+Because the parameters used to generate the data are known, the simulated datasets can be used to test whether `buRst` recovers both the individual bursting parameters and the changes introduced between conditions.
+
+The validation workflow is:
+
+1. attach the known simulation parameters to the corresponding genes;
+2. combine the simulated reference and perturbed conditions;
+3. combine the discrete likelihood files generated during simulation;
+4. fit the two simulated conditions using `run_kinetics_batch()`;
+5. compare the estimates with the known simulation truth.
+
+### Attaching the simulation truth
+
+For downstream evaluation, the true parameters can be stored in the `gene.info` component of each simulated `grandR` object.
+
+For example:
+
+```{r, eval = FALSE}
+add_simulation_truth <- function(data, truth, timepoint) {
+
+  if (timepoint == "t0") {
+
+    truth_sub <- truth %>%
+      transmute(
+        Gene = gene,
+        true_B.t0 = B_0,
+        true_km.t0 = km_0,
+        true_d.t0 = d_0
+      )
+
+  } else if (timepoint == "t2") {
+
+    truth_sub <- truth %>%
+      transmute(
+        Gene = gene,
+        true_B.t2 = B_2,
+        true_km.t2 = km_2,
+        true_d.t2 = d_2
+      )
+
+  } else {
+
+    stop("timepoint must be 't0' or 't2'")
+  }
+
+  idx <- match(
+    data$gene.info$Gene,
+    truth_sub$Gene
+  )
+
+  if (anyNA(idx)) {
+    stop(
+      "Could not match ",
+      sum(is.na(idx)),
+      " genes to the simulation truth."
+    )
+  }
+
+  truth_cols <- setdiff(
+    colnames(truth_sub),
+    "Gene"
+  )
+
+  data$gene.info[truth_cols] <-
+    truth_sub[idx, truth_cols, drop = FALSE]
+
+  data
+}
+```
+
+The truth is then attached to the two simulated conditions:
+
+```{r, eval = FALSE}
+data_0h <- add_simulation_truth(
+  data_0h,
+  truth,
+  "t0"
+)
+
+data_2h <- add_simulation_truth(
+  data_2h,
+  truth,
+  "t2"
+)
+```
+
+The column names use the suffixes `.t0` and `.t2`. These suffixes will later allow `run_kinetics_batch()` to associate fitted parameters with their corresponding ground-truth values.
+
+### Combining the simulated conditions
+
+The two simulated `grandR` objects are merged before fitting:
+
+```{r, eval = FALSE}
+data <- merge.grandR(
+  data_0h,
+  data_2h
+)
+```
+
+The merged object now contains both `sim_0` and `sim_2`.
+
+## Combining discrete likelihood files
+
+When the two conditions were simulated separately, their discrete likelihood information was also written to separate `.targets` directories.
+
+Before fitting the merged dataset, these files can be combined using `merge_targets_dirs()`.
+
+For example:
+
+```{r, eval = FALSE}
+merge_targets_dirs(
+  targets1 = "sim_ref.targets",
+  targets2 = "sim_perturbed.targets",
+  output_targets = "sim_merged.targets",
+  h5_filename = "4sU.Binom.discrete.h5",
+  overwrite = TRUE,
+  verbose_every = 100
+)
+
+h5_path <- file.path(
+  "sim_merged.targets",
+  "4sU.Binom.discrete.h5"
+)
+```
+
+This produces a single HDF5 file containing the discrete likelihood information required for fitting both simulated conditions.
+
+## Re-fitting the simulated experiment
+
+The merged simulated dataset can now be analyzed in the same way as an experimental two-condition dataset.
+
+```{r, eval = FALSE}
+out_sim <- run_kinetics_batch(
+  data = data,
+  genes = Genes(data),
+
+  cond1 = "sim_0",
+  cond2 = "sim_2",
+
+  t.label = 2,
+  t.diff = 2,
+
+  fit1_steady = TRUE,
+  fit2_steady = FALSE,
+
+  fit1_ref_cond = NULL,
+  fit2_ref_cond = "sim_0",
+
+  h5_path = h5_path,
+
+  ndraw = 20000,
+  seed = 123,
+
+  do_compare = TRUE,
+
+  truth_suffix1 = "t0",
+  truth_suffix2 = "t2",
+
+  require_h5 = TRUE,
+  keep_only_unique_symbols = TRUE,
+
+  parallel = TRUE,
+  ncores = 4,
+
+  timeout_sec = 300,
+  verbose_every = 50
+)
+```
+
+This mirrors the experimental analysis:
+
+* `sim_0` is treated as the steady-state reference;
+* `sim_2` is treated as a non-steady-state condition;
+* the reference state for `sim_2` is `sim_0`;
+* `do_compare = TRUE` enables comparison of the fitted bursting parameters between conditions.
+
+The arguments
+
+```{r, eval = FALSE}
+truth_suffix1 = "t0"
+truth_suffix2 = "t2"
+```
+
+identify the ground-truth columns that were added to `gene.info`.
+
+This makes it possible to retain the known simulation parameters alongside the corresponding fitted quantities during validation.
+
+## Inspecting parameter recovery
+
+The resulting fits can be inspected in the same way as fits to experimental data:
+
+```{r, eval = FALSE}
+out_sim$fits %>%
+  select(
+    gene,
+    fit_cond,
+    km_hat,
+    B_hat,
+    d_hat,
+    id_flag
+  ) %>%
+  head()
+```
+
+Because the true values are known, estimated and simulated parameters can also be compared directly.
+
+For example, one can examine whether inferred burst frequencies agree with the values used for simulation and whether genes assigned to `freq_only`, `size_only`, or combined perturbation classes are classified accordingly.
+
+The simulation truth itself provides the exact changes introduced for each gene:
+
+```{r, eval = FALSE}
+truth %>%
+  select(
+    gene,
+    true_class,
+    true_lfc_km,
+    true_lfc_B,
+    km_0,
+    km_2,
+    B_0,
+    B_2
+  ) %>%
+  head()
+```
+
+This allows parameter recovery and differential bursting inference to be evaluated against a known ground truth.
+
+## Complete simulation-validation workflow
+
+Taken together, the workflow described in this vignette is:
+
+1. infer realistic bursting parameters from experimental data;
+2. retain well-identified genes;
+3. use the fitted parameters to define a reference state;
+4. introduce known changes in burst frequency and/or burst size;
+5. simulate a steady-state reference condition;
+6. simulate a perturbed condition evolving from that reference state;
+7. merge the simulated conditions and their likelihood information;
+8. re-fit the simulated experiment using the standard `buRst` workflow;
+9. compare the fitted parameters and inferred changes with the known simulation truth.
+
+This provides a controlled framework for testing the ability of `buRst` to recover transcriptional bursting parameters and changes in transcriptional bursting between conditions.

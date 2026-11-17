@@ -1,0 +1,236 @@
+---
+title: "Inferring transcriptional bursting parameters with buRst"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Inferring transcriptional bursting parameters with buRst}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Overview
+
+`buRst` provides methods for inferring transcriptional bursting parameters from scSLAM-seq data.
+
+The package combines mechanistic RNA count distributions with discrete likelihood profiles to estimate parameters describing transcriptional bursting, in particular burst frequency and burst size.
+
+This vignette demonstrates a typical `buRst` analysis using scSLAM-seq data stored as a `grandR` object. The workflow consists of:
+
+1. loading and filtering the scSLAM-seq data;
+2. defining the experimental conditions;
+3. fitting the bursting model for individual genes;
+4. inspecting the resulting parameter estimates and model diagnostics.
+
+## Loading the packages
+
+```{r}
+library(buRst)
+library(grandR)
+library(dplyr)
+```
+
+`buRst` operates on scSLAM-seq count data represented using the data structures provided by `grandR`.
+
+## Preparing scSLAM-seq data
+
+For example, GRAND-SLAM/GRAND3 output can be read using `grandR`:
+
+```{r, eval = FALSE}
+d <- ReadGRAND3("path/to/grand3/output")
+```
+
+Before fitting the bursting model, genes with very little information can be removed. In the analysis shown here, genes were retained if at least 50 cells contained a count of at least one:
+
+```{r, eval = FALSE}
+d <- FilterGenes(
+  d,
+  mincol = 50,
+  minval = 1
+)
+```
+
+Cells without 4sU labeling information are then removed:
+
+```{r, eval = FALSE}
+d <- subset(
+  d,
+  no4sU == FALSE
+)
+```
+
+Finally, the experimental conditions used for the analysis are defined:
+
+```{r, eval = FALSE}
+Condition(d) <- c(
+  "Library",
+  "Sample"
+)
+```
+
+The exact filtering strategy and condition variables will depend on the experimental design.
+
+## Fitting transcriptional bursting parameters
+
+The main workflow for fitting multiple genes is provided by `run_kinetics_batch()`.
+
+As an example, consider a comparison between A549 cells at 0 h and 2 h:
+
+```{r, eval = FALSE}
+out <- run_kinetics_batch(
+  data = d,
+  genes = Genes(d),
+  cond1 = "A549 0h",
+  cond2 = "A549 2h",
+  t.label = 2,
+  t.diff = 2,
+  fit1_steady = TRUE,
+  fit2_steady = FALSE,
+  fit1_ref_cond = NULL,
+  fit2_ref_cond = "A549 0h",
+  h5_path = "path/to/4sU.Binom.discrete.h5",
+  ndraw = 20000,
+  seed = 123,
+  do_compare = TRUE,
+  verbose_every = 50,
+  require_h5 = TRUE,
+  keep_only_unique_symbols = TRUE,
+  parallel = TRUE,
+  ncores = 4,
+  timeout_sec = 300
+)
+```
+
+Here, the first condition is treated as a steady-state reference, whereas the second condition is modeled as a non-steady-state condition originating from the reference state.
+
+The labeling time is specified using `t.label`. In this example, cells were labeled for 2 hours. For non-steady-state inference, `t.diff` must equal `t.label`: the reference represents RNA at labeling onset. The current model does not include synthesis in an interval before labeling.
+
+For a full analysis, `ndraw = 20000` can be used to summarize the local Laplace uncertainty. Smaller values may be useful when testing a workflow.
+
+## Understanding the main arguments
+
+Several arguments control how the two conditions are fitted.
+
+`fit1_steady` and `fit2_steady` specify whether a condition is assumed to be in steady state. In the example above, the 0 h condition is fitted under a steady-state model, whereas the 2 h condition is allowed to deviate from steady state.
+
+For a non-steady-state condition, `fit2_ref_cond` specifies the condition that provides the initial state. Here, the transcriptional state at 0 h is used as the reference for fitting the 2 h condition.
+
+The `h5_path` argument points to the discrete likelihood information generated for the corresponding scSLAM-seq experiment.
+
+When `do_compare = TRUE`, `buRst` additionally evaluates changes in bursting parameters between the two fitted conditions.
+
+## Inspecting the results
+
+`run_kinetics_batch()` returns the fitted parameter estimates together with diagnostic information.
+
+```{r, eval = FALSE}
+out
+```
+
+Gene-level fits are stored in:
+
+```{r, eval = FALSE}
+out$fits
+```
+
+For example, results for the steady-state reference condition can be selected using `dplyr`:
+
+```{r, eval = FALSE}
+fit_0h <- out$fits %>%
+  filter(fit_cond == "A549 0h")
+```
+
+The fitted quantities include estimates of the burst parameters and RNA degradation rate. For example:
+
+```{r, eval = FALSE}
+fit_0h %>%
+  select(
+    gene,
+    km_hat,
+    B_hat,
+    d_hat,
+    id_flag
+  ) %>%
+  head()
+```
+
+Here, `km_hat` represents the fitted burst frequency, `B_hat` the fitted burst size, and `d_hat` the RNA degradation rate.
+
+## Fit diagnostics
+
+Not every gene necessarily contains enough information to identify all bursting parameters reliably. `buRst` therefore reports diagnostic information in `id_flag`.
+
+For example, fits flagged because of an ill-conditioned Hessian or a strong parameter trade-off can be excluded from downstream analyses:
+
+```{r, eval = FALSE}
+fit_0h_filtered <- fit_0h %>%
+  filter(
+    !id_flag %in% c(
+      "bad_hessian",
+      "strong_tradeoff"
+    )
+  )
+```
+
+These diagnostics are particularly important because burst frequency and burst size can be difficult to distinguish for genes whose observed count distributions provide limited information about the underlying parameters.
+
+## Using fitted parameters for downstream analyses
+
+The resulting parameter estimates can be used to study transcriptional regulation across genes or conditions.
+
+For example, high-confidence estimates can be extracted as:
+
+```{r, eval = FALSE}
+parameters <- fit_0h_filtered %>%
+  select(
+    gene,
+    km_hat,
+    B_hat,
+    d_hat
+  )
+```
+
+These estimates can also be used as parameters for simulations with `simulateBursting()`, which is described in a separate vignette.
+
+## A smaller test run
+
+A full genome-wide analysis can be computationally intensive. When setting up an analysis, it is therefore useful to first test the workflow on a small set of genes:
+
+```{r, eval = FALSE}
+test_genes <- head(
+  Genes(d),
+  10
+)
+
+test_fit <- run_kinetics_batch(
+  data = d,
+  genes = test_genes,
+  cond1 = "A549 0h",
+  cond2 = "A549 2h",
+  t.label = 2,
+  t.diff = 2,
+  fit1_steady = TRUE,
+  fit2_steady = FALSE,
+  fit1_ref_cond = NULL,
+  fit2_ref_cond = "A549 0h",
+  h5_path = "path/to/4sU.Binom.discrete.h5",
+  ndraw = 1000,
+  seed = 123,
+  do_compare = TRUE,
+  require_h5 = TRUE,
+  parallel = FALSE
+)
+```
+
+Once the input and experimental setup have been verified, the same workflow can be applied to the complete set of genes using a larger number of likelihood draws and, where appropriate, parallel processing.
+
+## Next steps
+
+The fitted bursting parameters can be used directly for biological comparisons or as the basis for simulation and model validation.
+
+See the simulation vignette for examples of using `simulateBursting()` to generate scSLAM-seq data from fitted burst frequency, burst size, and degradation-rate parameters.

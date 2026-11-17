@@ -1,0 +1,36 @@
+Package: buRst
+Type: Package
+Title: Discrete Likelihood Inference of Transcriptional Bursting from scSLAM-seq
+Version: 0.1.1
+Authors@R:
+    person("Teresa", "Rummel", email = "teresa.rummel@ur.de", role = c("aut", "cre"))
+Description: Methods to infer transcriptional bursting parameters
+    (burst size and burst frequency) from scSLAM-seq data by combining
+    discrete likelihood profiles with mechanistic RNA count distributions
+    under a bursting model.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.3
+LinkingTo: Rcpp
+Imports:
+    grandR,
+    methods,
+    numDeriv,
+    R.utils,
+    tibble,
+    tidyr,
+    Rcpp,
+    Matrix,
+    matrixStats,
+    rhdf5,
+    MASS,
+    rlang,
+    dplyr
+Suggests:
+    ggplot2,
+    testthat,
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
+VignetteBuilder: knitr
