@@ -1,0 +1,197 @@
+---
+title: "Same mean, different bursts: exploring RNA count distributions"
+author: "buRst developers"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Same mean, different bursts: exploring RNA count distributions}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4.3,
+  fig.align = "center"
+)
+```
+
+## A mean can hide two very different transcriptional programs
+
+Imagine two genes with the **same average RNA abundance**. In one, transcriptional bursts are frequent but small; in the other, bursts are infrequent but large. Can the RNA count distributions distinguish them?
+
+`buRst` models transcriptional bursts using the burst initiation rate (`km`), mean burst size (`B`), and RNA degradation rate (`d`). At steady state, the expected RNA count is
+
+$$
+E[N] = \frac{k_m B}{d}.
+$$
+
+This vignette uses **only exported `buRst` functions**, runs entirely on synthetic examples, and makes all plots with base R. No scSLAM-seq files, HDF5 likelihood profiles, or additional plotting packages are needed.
+
+```{r libraries}
+library(buRst)
+```
+
+## Two models with the same expected abundance
+
+Hold the degradation rate fixed at 1, and adjust burst frequency and burst size so that both models have an expected count of 4 RNA molecules:
+
+```{r parameters}
+models <- data.frame(
+  model = c("Frequent, small bursts", "Rare, large bursts"),
+  km = c(2, 0.5),
+  B = c(2, 8),
+  d = c(1, 1)
+)
+models$expected_mean <- with(models, km * B / d)
+knitr::kable(models, digits = 2)
+```
+
+To see the full distribution rather than just its mean, we evaluate the steady-state probability mass function (PMF). `burst_pmf_new()` computes the distribution of RNA produced under the bursting model. With `t_end = Inf`, it yields the stationary distribution for a population generated from an initially empty system over an infinite time horizon.
+
+```{r compute-pmfs}
+pmfs <- lapply(seq_len(nrow(models)), function(i) {
+  burst_pmf_new(
+    t_end = Inf,
+    km = models$km[i],
+    B = models$B[i],
+    d = models$d[i],
+    N = 64L,
+    eps_tail = 1e-8
+  )
+})
+
+# Quick numerical checks, also useful if this vignette is rebuilt on CRAN.
+stopifnot(all(vapply(pmfs, function(x) abs(sum(x$prob) - 1) < 1e-6,
+                     logical(1))))
+
+moments <- data.frame(
+  model = models$model,
+  mean = vapply(pmfs, function(x) sum(x$k * x$prob), numeric(1)),
+  variance = vapply(pmfs, function(x) {
+    mu <- sum(x$k * x$prob)
+    sum((x$k - mu)^2 * x$prob)
+  }, numeric(1)),
+  zero_fraction = vapply(pmfs, function(x) x$prob[match(0, x$k)], numeric(1))
+)
+knitr::kable(moments, digits = 3)
+```
+
+The estimated means are close, but the variances and fractions of cells with zero RNA molecules differ. This is the central intuition behind using **distributional information** rather than just average expression to study bursting.
+
+## See the difference
+
+```{r plot-pmfs, fig.cap="Predicted steady-state RNA count distributions for two models with the same mean."}
+counts <- 0:25
+prob_at <- function(df, values) {
+  out <- numeric(length(values))
+  pos <- match(values, df$k)
+  available <- !is.na(pos)
+  out[available] <- df$prob[pos[available]]
+  out
+}
+
+p_small <- prob_at(pmfs[[1]], counts)
+p_large <- prob_at(pmfs[[2]], counts)
+
+plot(counts, p_small, type = "b", pch = 16, lwd = 2,
+     xlab = "RNA molecules per cell", ylab = "Probability",
+     ylim = range(c(0, p_small, p_large)),
+     col = "#176B87")
+lines(counts, p_large, type = "b", pch = 17, lwd = 2,
+      col = "#E07A5F")
+legend("topright", legend = models$model,
+       col = c("#176B87", "#E07A5F"), pch = c(16, 17),
+       lwd = 2, bty = "n", cex = 0.85)
+```
+
+The rare-large-burst model places more probability on zero expression and on relatively high counts. Both models have the same steady-state mean, but their shapes are clearly different.
+
+## What might a small experiment look like?
+
+We can sample RNA counts from each model's **calculated PMF**. This is an illustrative sample of independent cells, not a simulation of individual reaction events.
+
+```{r sample, fig.cap="Illustrative synthetic cell counts sampled from the two predicted distributions."}
+set.seed(2026)
+n_cells <- 150L
+samples <- lapply(pmfs, function(p) {
+  sample(p$k, size = n_cells, replace = TRUE, prob = p$prob)
+})
+
+boxplot(samples, names = c("Frequent / small", "Rare / large"),
+        ylab = "RNA molecules per cell", col = c("#B4D6E0", "#F5C6B8"),
+        outline = TRUE)
+stripchart(samples, method = "jitter", vertical = TRUE, add = TRUE,
+           pch = 16, cex = 0.35, col = grDevices::adjustcolor("black", 0.35))
+```
+
+Sampling adds variability: the sample means will not be exactly 4, particularly with relatively few cells. But the distributional distinction can remain apparent.
+
+```{r sample-summary}
+sample_summary <- data.frame(
+  model = models$model,
+  sampled_mean = vapply(samples, mean, numeric(1)),
+  sampled_variance = vapply(samples, var, numeric(1)),
+  sampled_zero_fraction = vapply(samples, function(x) mean(x == 0), numeric(1))
+)
+knitr::kable(sample_summary, digits = 3)
+```
+
+## Old and newly synthesized RNA after labeling
+
+For scSLAM-seq interpretation, `buRst` also provides distributions for **new RNA** produced during a labeling window, **old RNA** surviving from the initial population, and their **total**. Here, we start in steady state, maintain the same parameters during labeling, and use a short illustrative labeling window.
+
+```{r old-new-total}
+p <- models[1, ]
+label_time <- 1.5
+
+new_rna <- burst_pmf_new(
+  t_end = label_time, km = p$km, B = p$B, d = p$d,
+  N = 64L, eps_tail = 1e-8
+)
+old_rna <- burst_pmf_old(
+  t_end = label_time, d = p$d, steady = TRUE,
+  km = p$km, B = p$B, N = 64L, eps_tail = 1e-8
+)
+total_rna <- burst_pmf_total(
+  t_end = label_time, km = p$km, B = p$B, d = p$d,
+  steady = TRUE, N = 64L, eps_tail = 1e-8
+)
+
+summary_pool <- function(df, label) {
+  data.frame(pool = label, mean = sum(df$k * df$prob))
+}
+pool_means <- rbind(
+  summary_pool(old_rna, "Old RNA"),
+  summary_pool(new_rna, "New RNA"),
+  summary_pool(total_rna, "Total RNA")
+)
+knitr::kable(pool_means, digits = 3)
+```
+
+The expected total abundance stays approximately constant because the system starts in steady state and the transcription and degradation parameters do not change. The *composition* changes: old RNA is degraded while new RNA is synthesized.
+
+```{r plot-pools, fig.cap="Predicted old, new, and total RNA distributions after a labeling interval."}
+plot_k <- 0:18
+old_p <- prob_at(old_rna, plot_k)
+new_p <- prob_at(new_rna, plot_k)
+total_p <- prob_at(total_rna, plot_k)
+plot(plot_k, old_p, type = "l", lwd = 2, col = "#8D99AE",
+     xlab = "RNA molecules per cell", ylab = "Probability",
+     ylim = range(c(0, old_p, new_p, total_p)))
+lines(plot_k, new_p, lwd = 2, col = "#2A9D8F")
+lines(plot_k, total_p, lwd = 2, col = "#264653")
+legend("topright", c("Old", "New", "Total"),
+       col = c("#8D99AE", "#2A9D8F", "#264653"),
+       lwd = 2, bty = "n")
+```
+
+## Take-home message
+
+**Equal average RNA abundance does not imply equal transcriptional bursting.** In this controlled example, frequent small bursts and rare large bursts produce distributions with different dispersion and zero fractions. The old/new RNA decomposition adds time-resolved information relevant to labeling experiments.
+
+This vignette illustrates the **forward model** (parameters to predicted RNA count distributions). For inference from experimental scSLAM-seq data and discrete likelihood profiles, see `vignette("inference", package = "buRst")`. For the larger simulation pipeline, see `vignette("simulation", package = "buRst")`.
