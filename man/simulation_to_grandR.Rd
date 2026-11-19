@@ -38,3 +38,21 @@ A grandR object.
 \description{
 Convert simulated new/old matrices into a grandR object
 }
+\details{
+Rows are genes and columns are cells. The corresponding row of \code{df_vals}
+contains that gene's true parameters. The returned \code{count} slot is \code{new + old};
+the \code{ntr} slot is the new-to-total ratio, with zero for zero total counts.
+True parameter columns use names such as \code{true_B.t0}.
+}
+\examples{
+new <- matrix(c(0, 1, 2, 1, 0, 1), nrow = 2, byrow = TRUE)
+old <- matrix(c(2, 1, 0, 3, 2, 1), nrow = 2, byrow = TRUE)
+truth <- data.frame(kms = c(1, 2), Bs = c(2, 1), ds = c(0.5, 0.5))
+sim <- simulation_to_grandR(new, old, truth,
+                            gene.info = c("gene_A", "gene_B"))
+grandR::GetMatrix(sim, mode.slot = "count")
+
+}
+\seealso{
+\code{simulateBursting()}, \code{write_10x_reference()}
+}

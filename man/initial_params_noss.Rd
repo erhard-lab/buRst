@@ -21,3 +21,14 @@ Named numeric vector c(B=..., km=...).
 \description{
 Estimate initial bursting parameters from non-steady-state data
 }
+\details{
+The moments describe counts per cell in the reference and final populations.
+This moment-based result is an initialization, not a likelihood fit or an
+uncertainty estimate. Supply time and rate values in consistent units.
+}
+\examples{
+# d, final mean/variance, and reference mean/variance.
+params <- c(d = 0.5, m = 5, v = 15, m_0 = 4, v_0 = 12)
+initial_params_noss(params, t.end = 1, B = 2)
+
+}

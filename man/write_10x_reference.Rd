@@ -33,3 +33,24 @@ Named paths to matrix, barcode, and feature files.
 The export uses the actual grandR object layout:
 \code{data$data$count}, \code{data$coldata}, and \code{data$gene.info}.
 }
+\details{
+The exported gene order and cell identifiers must match the likelihood file
+used for fitting. The default \code{barcode_column = "Name"} preserves full cell
+identifiers. Do not replace them by raw barcode substrings unless all other
+files use those exact same identifiers.
+}
+\examples{
+sim <- simulateBursting(
+  kms = 1, Bs = 2, ds = 0.5, t.end = 1, no.cells = 8,
+  gene.info = "gene_A", condition = "sim", ntr.sim = FALSE,
+  parallel = FALSE, seed = 1, on_gene_error = "stop"
+)
+work <- tempfile("buRst_reference_")
+files <- write_10x_reference(sim, output_dir = work)
+file.exists(unlist(files))
+unlink(work, recursive = TRUE)
+
+}
+\seealso{
+\code{SimulateReads()}, \code{merge_targets_dirs()}
+}

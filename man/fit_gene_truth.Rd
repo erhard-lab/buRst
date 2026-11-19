@@ -25,16 +25,16 @@ fit_gene_truth(
 
 \item{gene}{Gene symbol or ENSG identifier.}
 
-\item{fit.cond}{Condition to fit; must match `Coldata(data)$Condition`.}
+\item{fit.cond}{Condition to fit; must match \code{Coldata(data)$Condition}.}
 
 \item{t.label}{Labeling duration.}
 
 \item{steady}{Whether to use the steady-state model.}
 
-\item{ref.cond}{Reference condition used when `steady = FALSE`.}
+\item{ref.cond}{Reference condition used when \code{steady = FALSE}.}
 
-\item{t.diff}{Modeled reference-to-observation interval when `steady = FALSE`.
-Must equal `t.label`; the reference represents RNA at labeling onset.}
+\item{t.diff}{Modeled reference-to-observation interval when \code{steady = FALSE}.
+Must equal \code{t.label}; the reference represents RNA at labeling onset.}
 
 \item{ndraw}{Number of Laplace draws.}
 
@@ -42,7 +42,7 @@ Must equal `t.label`; the reference represents RNA at labeling onset.}
 
 \item{h5_path}{Retained for backward compatibility; not used.}
 
-\item{truth_suffix}{Optional suffix for truth columns in `GeneInfo(data)`.}
+\item{truth_suffix}{Optional suffix for truth columns in \code{GeneInfo(data)}.}
 
 \item{add_pit}{Whether to append truth and PIT columns when available.}
 
@@ -50,9 +50,28 @@ Must equal `t.label`; the reference represents RNA at labeling onset.}
 identifiability warning; the historical negative default is accepted.}
 }
 \value{
-See [fit_gene()].
+See \code{\link[=fit_gene]{fit_gene()}}.
 }
 \description{
 Intended mainly for simulations or diagnostics where exact new and old RNA
-counts are available in the `new` and `old` grandR slots.
+counts are available in the \code{new} and \code{old} grandR slots.
+}
+\details{
+This route is for validation with known new/old molecule counts. Experimental
+new-RNA point estimates should not be interpreted as known ground truth.
+Parameter and interval summaries otherwise follow \code{fit_gene()}.
+}
+\examples{
+\dontrun{
+# d must contain exact simulated new and old count slots.
+fit <- fit_gene_truth(
+  data = d, gene = "gene_A", fit.cond = "sim", t.label = 1,
+  steady = TRUE, ndraw = 2000, seed = 1
+)
+fit[, c("gene", "km_hat", "B_hat", "d_hat", "id_flag")]
+}
+
+}
+\seealso{
+\code{fit_gene()}, \code{simulateBursting()}
 }

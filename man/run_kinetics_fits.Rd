@@ -44,7 +44,7 @@ run_kinetics_fits(
 \item{t.label}{Labeling duration.}
 
 \item{t.diff}{Modeled reference-to-observation interval for non-steady fits.
-Must equal `t.label`; pre-labeling synthesis is not modeled.}
+Must equal \code{t.label}; pre-labeling synthesis is not modeled.}
 
 \item{fit1_steady, fit2_steady}{Whether each fit uses the steady-state model.}
 
@@ -66,23 +66,51 @@ Must equal `t.label`; pre-labeling synthesis is not modeled.}
 
 \item{keep_only_unique_symbols}{Drop symbols mapping to multiple ENSG IDs.}
 
-\item{parallel}{Use `parallel::mclapply()` on non-Windows systems.}
+\item{parallel}{Use \code{parallel::mclapply()} on non-Windows systems.}
 
 \item{ncores}{Number of forked workers.}
 
 \item{timeout_sec}{Optional timeout per fit.}
 
-\item{on_timeout}{One of `"error"`, `"warn"`, or `"silent"`.}
+\item{on_timeout}{One of \code{"error"}, \code{"warn"}, or \code{"silent"}.}
 
 \item{save_rds_dir}{Optional directory in which each successful fit is saved.}
 
 \item{reference}{Optional preloaded 10x reference. It is loaded once when
-omitted and `fit_fun` explicitly accepts a `reference` argument.}
+omitted and \code{fit_fun} explicitly accepts a \code{reference} argument.}
 }
 \value{
 A list containing the flat summaries, per-condition metadata, and a
-  nested `fit_objects[[gene]][[condition]]` store.
+nested \code{fit_objects[[gene]][[condition]]} store.
 }
 \description{
 Run bursting fits and retain complete fit objects
+}
+\details{
+The nested \code{fit_objects[[gene]][[condition]]} entries retain the attributes
+needed by \code{compare_posteriors_gate_star_kmB()}. This can use substantially more
+memory than \code{run_kinetics_batch()}. Check \code{fit_meta} for unsuccessful conditions
+before indexing the fitted objects.
+}
+\examples{
+\dontrun{
+# Replace the prefix and condition columns for your experiment.
+d <- grandR::ReadGRAND3("path/to/scifate", read.posterior = FALSE)
+d <- grandR::FilterGenes(d, mincol = 50, minval = 1)
+d <- subset(d, no4sU == FALSE)
+grandR::Condition(d) <- c("Library", "Sample")
+out <- run_kinetics_fits(
+  data = d, genes = c("DUSP1", "FKBP5"),
+  cond1 = "A549 0h", cond2 = "A549 2h", t.label = 2, t.diff = 2,
+  fit1_steady = TRUE, fit2_steady = FALSE, fit2_ref_cond = "A549 0h",
+  h5_path = "path/to/scifate.targets/4sU.Binom.discrete.h5", ndraw = 2000, seed = 1,
+  parallel = FALSE
+)
+head(out$fits)
+out$fit_objects[["DUSP1"]][["A549 0h"]]
+}
+
+}
+\seealso{
+\code{run_kinetics_batch()}, \code{compare_posteriors_gate_star_kmB()}
 }

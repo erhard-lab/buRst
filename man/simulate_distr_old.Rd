@@ -38,3 +38,9 @@ Numeric vector of length n.
 \description{
 Simulate old RNA counts after a labeling interval
 }
+\examples{
+x <- simulate_distr_old(t.end = 1, d = 0.5, n = 100,
+                        steady = FALSE, init = rep(4L, 100), seed = 1)
+mean(x)
+
+}

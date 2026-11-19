@@ -30,22 +30,39 @@ burst_pmf_old(
 
 \item{km, B}{Only used if steady=TRUE to generate the steady-state init distribution.}
 
-\item{N}{...}
+\item{N}{Optional initial FFT support size; tail checks may enlarge it.}
 
-\item{eps_tail}{...}
+\item{eps_tail}{Threshold for the mass in the upper tail-proxy bins.}
 
-\item{tail_bins}{...}
+\item{tail_bins}{Number of final support bins used for the tail proxy.}
 
-\item{maxN}{...}
+\item{maxN}{Maximum support size used by adaptive tail checks.}
 
 \item{max_tries}{Maximum number of attempts used when extending or fitting the PMF support.}
 
-\item{...}{Additional arguments passed to ...}
+\item{...}{Additional arguments forwarded to steady-state initialization,
+where applicable; otherwise reserved for compatibility.}
 }
 \value{
 data.frame with columns k and prob.
 }
 \description{
 Old RNA corresponds to the survival/decay of molecules present at t=0,
-with no synthesis during [0, t_end].
+with no synthesis during \verb{[0, t_end]}.
+}
+\details{
+No new synthesis contributes to this RNA pool. For \code{steady = FALSE},
+\code{init} describes the distribution at the start of the decay interval.
+The degradation rate and duration must use consistent time units.
+}
+\examples{
+# Start with exactly four old molecules in each cell.
+p <- burst_pmf_old(t_end = 1, d = 0.5, steady = FALSE,
+                   init = data.frame(k = 4, prob = 1))
+head(p)
+sum(p$k * p$prob)  # Approximately 4 * exp(-0.5)
+
+}
+\seealso{
+\code{burst_pmf_new()}, \code{burst_pmf_total()}, \code{simulate_distr_old()}
 }

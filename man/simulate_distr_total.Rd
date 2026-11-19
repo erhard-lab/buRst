@@ -38,3 +38,10 @@ A list with total, new, and old vectors.
 \description{
 Simulate total, new, and old counts
 }
+\examples{
+x <- simulate_distr_total(km = 1, B = 2, d = 0.5,
+                          n = 100, t.end = 1, seed = 1)
+head(data.frame(x))
+stopifnot(all(x$total == x$new + x$old))
+
+}

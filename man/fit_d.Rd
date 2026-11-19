@@ -7,7 +7,7 @@
 fit_d(ntr, total, t, t0 = NULL, f0 = NULL)
 }
 \arguments{
-\item{ntr}{Aggregate new-to-total RNA ratio in [0, 1].}
+\item{ntr}{Aggregate new-to-total RNA ratio in \verb{[0, 1]}.}
 
 \item{total}{Mean total RNA count in the fitted population.}
 

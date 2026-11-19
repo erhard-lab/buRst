@@ -2,7 +2,7 @@
 % Please edit documentation in R/60_fit_gene.R
 \name{fit_gene}
 \alias{fit_gene}
-\title{Fit bursting kinetics from posterior gene profiles}
+\title{Fit bursting kinetics from discrete labeling likelihoods}
 \usage{
 fit_gene(
   data,
@@ -26,16 +26,16 @@ fit_gene(
 
 \item{gene}{Gene symbol or ENSG identifier.}
 
-\item{fit.cond}{Condition to fit; must match `Coldata(data)$Condition`.}
+\item{fit.cond}{Condition to fit; must match \code{Coldata(data)$Condition}.}
 
 \item{t.label}{Labeling duration.}
 
 \item{steady}{Whether to use the steady-state model.}
 
-\item{ref.cond}{Reference condition used when `steady = FALSE`.}
+\item{ref.cond}{Reference condition used when \code{steady = FALSE}.}
 
-\item{t.diff}{Modeled reference-to-observation interval when `steady = FALSE`.
-Must equal `t.label`; the reference represents RNA at labeling onset.}
+\item{t.diff}{Modeled reference-to-observation interval when \code{steady = FALSE}.
+Must equal \code{t.label}; the reference represents RNA at labeling onset.}
 
 \item{h5_path}{Path to the HDF5 gene-profile file.}
 
@@ -43,22 +43,57 @@ Must equal `t.label`; the reference represents RNA at labeling onset.}
 
 \item{seed}{Random-number seed used for Laplace draws.}
 
-\item{truth_suffix}{Optional suffix for truth columns in `GeneInfo(data)`.}
+\item{truth_suffix}{Optional suffix for truth columns in \code{GeneInfo(data)}.}
 
 \item{add_pit}{Whether to append truth and PIT columns when available.}
 
 \item{ridge_cor_threshold}{Absolute correlation threshold used for the
 identifiability warning; the historical negative default is accepted.}
 
-\item{reference}{Optional preloaded 10x reference. When `NULL`, it is loaded
-from `dirname(h5_path)`. Batch runners should pass a shared reference.}
+\item{reference}{Optional preloaded 10x reference. When \code{NULL}, it is loaded
+from \code{dirname(h5_path)}. Batch runners should pass a shared reference.}
 }
 \value{
 A one-row data frame. The fitted optimizer object, posterior draws,
-  and intervals are attached as attributes `fit`, `samples`, and `CI`.
+and intervals are attached as attributes \code{fit}, \code{samples}, and \code{CI}.
 }
 \description{
-Fits one gene in one condition using posterior gene profiles stored in HDF5.
-The optimization is performed in `(log(lambda), log(B), log(d))` space,
-where `lambda = B * km`, followed by a Laplace approximation.
+Fits one gene in one condition using discrete labeling likelihoods in HDF5.
+The optimization is performed in \verb{(log(lambda), log(B), log(d))} space,
+where \code{lambda = B * km}, followed by a Laplace approximation.
+}
+\details{
+Retained gene and cell identifiers must match the HDF5/reference files.
+Filtering the grandR object is allowed; keep the original reference files
+and their ordering unchanged. The HDF5 directory must also contain matching
+\code{features.tsv.gz}, \code{barcodes.tsv.gz} and \code{matrix.mtx.gz} reference files.
+
+\code{km_hat} and \code{d_hat} are rates per unit time, \code{B_hat} is mean burst size,
+and \code{lambda_hat = km_hat * B_hat}. Columns ending in \verb{_lo}, \verb{_med} and \verb{_hi}
+summarize local Laplace draws. These draws approximate local uncertainty;
+they are not samples from a full MCMC analysis.
+
+Check \code{conv} and \code{id_flag} before biological interpretation. In particular,
+\code{bad_hessian} or \code{strong_tradeoff} can indicate poorly resolved parameters.
+For a transient fit, the reference describes RNA at labeling onset and
+\code{t.diff} must equal \code{t.label}. Pre-labeling synthesis is not modeled.
+}
+\examples{
+\dontrun{
+# Replace the prefix and condition columns for your experiment.
+d <- grandR::ReadGRAND3("path/to/scifate", read.posterior = FALSE)
+d <- grandR::FilterGenes(d, mincol = 50, minval = 1)
+d <- subset(d, no4sU == FALSE)
+grandR::Condition(d) <- c("Library", "Sample")
+fit <- fit_gene(
+  d, gene = "DUSP1", fit.cond = "A549 0h", t.label = 2,
+  steady = TRUE, h5_path = "path/to/scifate.targets/4sU.Binom.discrete.h5", ndraw = 2000, seed = 1
+)
+fit[, c("gene", "km_hat", "B_hat", "d_hat", "id_flag")]
+head(attr(fit, "samples")$km)
+}
+
+}
+\seealso{
+\code{fit_gene_MAP()}, \code{fit_gene_beta()}, \code{run_kinetics_batch()}
 }

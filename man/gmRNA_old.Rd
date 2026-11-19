@@ -21,3 +21,9 @@ Integer-like numeric vector of length n.
 \description{
 Simulate old RNA survival counts via Gillespie
 }
+\examples{
+set.seed(1)
+x <- gmRNA_old(n = 100, d = 0.5, t.end = 1, init = rep(4L, 100))
+range(x)  # Surviving counts cannot exceed their initial counts.
+
+}

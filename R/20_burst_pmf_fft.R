@@ -109,12 +109,30 @@ NULL
 #' @param km Burst initiation rate.
 #' @param d Degradation rate.
 #' @param B Mean burst size.
-#' @param N Optional FFT support size.
+#' @param N Optional initial FFT support size; tail checks may enlarge it.
 #' @param eps_tail Tail-mass proxy threshold.
 #' @param tail_bins Number of bins used for tail proxy.
 #' @param maxN Maximum value of N to consider.
-#' @param ... Additional arguments passed to ...
+#' @param ... Additional arguments forwarded to steady-state initialization,
+#'   where applicable; otherwise reserved for compatibility.
 #' @return data.frame with columns k and prob.
+#' @details
+#' `km` and `d` are rates per unit time; `t_end` uses the same time unit.
+#' `B` is the mean number of molecules per burst. Newly synthesized RNA starts
+#' at zero at the beginning of the interval. Setting `t_end = Inf` gives the
+#' stationary RNA count distribution. Inspect `tail_converged` and `tail_proxy`
+#' attributes when checking numerical support; the tail criterion is a proxy.
+#'
+#' @seealso `burst_pmf_old()`, `burst_pmf_total()`, `simulate_distr_new()`
+#'
+#' @examples
+#' p <- burst_pmf_new(t_end = 1, km = 1, B = 2, d = 0.5)
+#' head(p)
+#' sum(p$prob)
+#' sum(p$k * p$prob)  # Expected new RNA count
+#' plot(p$k, p$prob, type = "h", xlim = c(0, 20),
+#'      xlab = "New RNA molecules", ylab = "Probability")
+#'
 #' @export
 burst_pmf_new <- function(t_end = 2, km, d, B,
                           N = NULL,
@@ -161,20 +179,35 @@ burst_pmf_new <- function(t_end = 2, km, d, B,
 #' PMF of old RNA after decay for time t_end
 #'
 #' Old RNA corresponds to the survival/decay of molecules present at t=0,
-#' with no synthesis during [0, t_end].
+#' with no synthesis during `[0, t_end]`.
 #'
 #' @param t_end Time horizon.
 #' @param d Degradation rate.
 #' @param steady If TRUE, uses steady-state init from bursting model.
 #' @param init If steady=FALSE: initial distribution at t=0 (data.frame k/prob or raw samples).
 #' @param km,B Only used if steady=TRUE to generate the steady-state init distribution.
-#' @param N ...
-#' @param eps_tail ...
-#' @param tail_bins ...
-#' @param maxN ...
+#' @param N Optional initial FFT support size; tail checks may enlarge it.
+#' @param eps_tail Threshold for the mass in the upper tail-proxy bins.
+#' @param tail_bins Number of final support bins used for the tail proxy.
+#' @param maxN Maximum support size used by adaptive tail checks.
 #' @param max_tries Maximum number of attempts used when extending or fitting the PMF support.
-#' @param ... Additional arguments passed to ...
+#' @param ... Additional arguments forwarded to steady-state initialization,
+#'   where applicable; otherwise reserved for compatibility.
 #' @return data.frame with columns k and prob.
+#' @details
+#' No new synthesis contributes to this RNA pool. For `steady = FALSE`,
+#' `init` describes the distribution at the start of the decay interval.
+#' The degradation rate and duration must use consistent time units.
+#'
+#' @seealso `burst_pmf_new()`, `burst_pmf_total()`, `simulate_distr_old()`
+#'
+#' @examples
+#' # Start with exactly four old molecules in each cell.
+#' p <- burst_pmf_old(t_end = 1, d = 0.5, steady = FALSE,
+#'                    init = data.frame(k = 4, prob = 1))
+#' head(p)
+#' sum(p$k * p$prob)  # Approximately 4 * exp(-0.5)
+#'
 #' @export
 burst_pmf_old <- function(t_end, d,
                           steady = TRUE,
@@ -255,12 +288,32 @@ burst_pmf_old <- function(t_end, d,
 #' @param B Mean burst size.
 #' @param steady If TRUE, old pool init is steady-state.
 #' @param init If steady=FALSE, initial distribution for old pool at t=0.
-#' @param N Initial or fixed truncation/support size.
-#' @param eps_tail Tail-probability tolerance used to determine whether the support is sufficiently large.
+#' @param N Optional initial FFT support size; tail checks may enlarge it.
+#' @param eps_tail Threshold for the mass in the upper tail-proxy bins.
 #' @param tail_bins Number of bins at the upper end of the support used to assess remaining tail mass.
 #' @param maxN Maximum allowed support size.
 #' @param ... Additional arguments passed to lower-level PMF routines.
 #' @return data.frame(k, prob, type).
+#' @details
+#' The total RNA distribution is the convolution of surviving old RNA and
+#' newly synthesized RNA. For `steady = FALSE`, `init` supplies the reference
+#' count distribution at the beginning of the interval. Rates and durations
+#' must use consistent time units.
+#'
+#' @seealso `burst_pmf_new()`, `burst_pmf_old()`, `simulate_distr_total()`
+#'
+#' @examples
+#' # A steady-state population retains its mean during labeling.
+#' p <- burst_pmf_total(t_end = 1, km = 1, B = 2, d = 0.5)
+#' sum(p$k * p$prob)  # Approximately km * B / d = 4
+#'
+#' # A transient population starting with four molecules per cell.
+#' p_transient <- burst_pmf_total(
+#'   t_end = 1, km = 2, B = 2, d = 0.5, steady = FALSE,
+#'   init = data.frame(k = 4, prob = 1)
+#' )
+#' sum(p_transient$k * p_transient$prob)
+#'
 #' @export
 burst_pmf_total <- function(t_end, km, d, B,
                             steady = TRUE,

@@ -15,3 +15,20 @@ A named list of paths, or \code{NULL} when no manifest is attached.
 \description{
 Retrieve files created by SimulateReads
 }
+\details{
+Count-only simulations do not create an output manifest. After \code{SimulateReads()}
+or a read-evidence simulation, this list records the actual exported paths;
+it does not copy or recreate the files.
+}
+\examples{
+sim <- simulateBursting(
+  kms = 1, Bs = 2, ds = 0.5, t.end = 1, no.cells = 8,
+  gene.info = "gene_A", condition = "sim", ntr.sim = FALSE,
+  parallel = FALSE, seed = 1, on_gene_error = "stop"
+)
+simulation_files(sim)  # NULL: no read-evidence export has been requested.
+
+}
+\seealso{
+\code{SimulateReads()}, \code{simulateBursting()}
+}

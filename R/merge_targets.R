@@ -166,6 +166,19 @@
 #' @param chunk_target Approximate HDF5 chunk size in bytes.
 #' @param verbose_every Progress interval in genes; zero disables messages.
 #' @return Invisibly, a manifest describing the merged directory.
+#' @seealso `SimulateReads()`, `write_10x_reference()`
+#'
+#' @examples
+#' \dontrun{
+#' # Inputs must share their gene order and have distinct cell names.
+#' manifest <- merge_targets_dirs(
+#'   targets1 = "reference.targets", targets2 = "perturbed.targets",
+#'   output_targets = "combined.targets",
+#'   h5_filename = "4sU.Binom.discrete.h5", overwrite = FALSE
+#' )
+#' manifest
+#' }
+#'
 #' @export
 merge_targets_dirs <- function(
     targets1,

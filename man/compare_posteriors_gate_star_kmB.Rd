@@ -29,57 +29,57 @@ compare_posteriors_gate_star_kmB(
 }
 \arguments{
 \item{res1}{First fitted result. Posterior samples must be stored in
-`attr(res1, "samples")` and contain numeric vectors `km` and `B`.}
+\code{attr(res1, "samples")} and contain numeric vectors \code{km} and \code{B}.}
 
 \item{res2}{Second fitted result with the same posterior-sample structure
-as `res1`.}
+as \code{res1}.}
 
 \item{gene}{Optional label used as the plot title.}
 
 \item{radius_cutoff}{Practical-change radius in joint log2FC space.
 Draws with radius less than or equal to this value are classified as
-no meaningful change. Default is `0.3`.}
+no meaningful change. Default is \code{0.3}.}
 
 \item{evidence_level}{Credible-ellipse level used to define the
-chi-squared Mahalanobis cutoff. Default is `0.95`.}
+chi-squared Mahalanobis cutoff. Default is \code{0.95}.}
 
 \item{min_outside_mass}{Minimum posterior probability required outside
-`radius_cutoff` to support a meaningful change. Default is `0.90`.}
+\code{radius_cutoff} to support a meaningful change. Default is \code{0.90}.}
 
 \item{mechanism_prob_cutoff}{Minimum conditional posterior mass among
-changed draws required to support one mechanism. Default is `0.60`.}
+changed draws required to support one mechanism. Default is \code{0.60}.}
 
 \item{frequency_angle}{Angle in degrees below which a changed draw is
-classified as frequency dominated. Default is `30`.}
+classified as frequency dominated. Default is \code{30}.}
 
 \item{size_angle}{Angle in degrees above which a changed draw is classified
-as size dominated. Default is `60`.}
+as size dominated. Default is \code{60}.}
 
-\item{dominance_cutoff}{For opposing `km`/`B` changes, minimum ratio of
+\item{dominance_cutoff}{For opposing \code{km}/\code{B} changes, minimum ratio of
 absolute log2FC magnitudes required to call one component dominant.
-Default is `1.20`.}
+Default is \code{1.20}.}
 
 \item{dominance_prob_cutoff}{Minimum posterior agreement among opposing
-draws required to support the dominant component. Default is `0.70`.}
+draws required to support the dominant component. Default is \code{0.70}.}
 
-\item{n}{Optional number of posterior comparison draws. If `NULL`, uses
+\item{n}{Optional number of posterior comparison draws. If \code{NULL}, uses
 the smaller number of valid draws across conditions.}
 
 \item{seed}{Optional random seed for reproducible independent sampling.}
 
-\item{eps}{Small positive threshold used to exclude non-positive `km` and
-`B` draws before taking logarithms.}
+\item{eps}{Small positive threshold used to exclude non-positive \code{km} and
+\code{B} draws before taking logarithms.}
 
 \item{ci_level}{Credible-interval level used for the marginal log2FC
-summaries of `km` and `B`. Default is `0.95`.}
+summaries of \code{km} and \code{B}. Default is \code{0.95}.}
 
 \item{lfc_ci_width_veto}{Optional maximum credible-interval width for
-mechanistic attribution. The default `Inf` disables this veto.}
+mechanistic attribution. The default \code{Inf} disables this veto.}
 
-\item{plot}{Logical; if `TRUE`, construct the km/B star plot.}
+\item{plot}{Logical; if \code{TRUE}, construct the km/B star plot.}
 
 \item{limits}{Optional numeric vector of length two giving symmetric plot
-limits. If `NULL`, limits are chosen from the posterior draws.}
+limits. If \code{NULL}, limits are chosen from the posterior draws.}
 
 \item{max_plot_points}{Maximum number of posterior draws displayed as
 points. This affects plotting only.}
@@ -89,36 +89,68 @@ points. This affects plotting only.}
 \value{
 A named list containing:
 \describe{
-  \item{summary}{One-row data frame with the main comparison results.}
-  \item{call_change}{Logical indicating whether both the joint-evidence
-    and practical-magnitude gates are passed.}
-  \item{interpretation}{Concise overall interpretation.}
-  \item{interpretation_detail}{Diagnostic text describing the gate and
-    mechanism probabilities.}
-  \item{attrib_ok}{Logical indicating whether mechanistic attribution
-    passes the optional credible-interval-width veto.}
-  \item{region_mass}{Unconditional posterior mass in each star region.}
-  \item{mechanism_mass}{Mechanism probabilities conditional on meaningful
-    change.}
-  \item{directional_mass}{Conditional masses for directional regions.}
-  \item{km_summary,B_summary}{Credible-interval summaries of the two
-    log2 fold changes.}
-  \item{posterior}{Joint posterior draw table used for classification.}
-  \item{plot}{A `ggplot` object when `plot = TRUE`, otherwise `NULL`.}
+\item{summary}{One-row data frame with the main comparison results.}
+\item{call_change}{Logical indicating whether both the joint-evidence
+and practical-magnitude gates are passed.}
+\item{interpretation}{Concise overall interpretation.}
+\item{interpretation_detail}{Diagnostic text describing the gate and
+mechanism probabilities.}
+\item{attrib_ok}{Logical indicating whether mechanistic attribution
+passes the optional credible-interval-width veto.}
+\item{region_mass}{Unconditional posterior mass in each star region.}
+\item{mechanism_mass}{Mechanism probabilities conditional on meaningful
+change.}
+\item{directional_mass}{Conditional masses for directional regions.}
+\item{km_summary,B_summary}{Credible-interval summaries of the two
+log2 fold changes.}
+\item{posterior}{Joint posterior draw table used for classification.}
+\item{plot}{A \code{ggplot} object when \code{plot = TRUE}, otherwise \code{NULL}.}
 }
 }
 \description{
 Compares posterior samples from two fitted conditions in joint
-`log2FC(km)` / `log2FC(B)` space. The procedure combines three ideas:
+\code{log2FC(km)} / \code{log2FC(B)} space. The procedure combines three ideas:
 }
 \details{
-1. a Mahalanobis gate testing whether the posterior center is separated
-   from zero in the joint two-dimensional posterior;
-2. a practical-effect gate requiring sufficient posterior mass outside a
-   user-defined radius around zero; and
-3. a star-region classifier that attributes supported changes to burst
-   frequency, burst size, both, or an opposing trade-off.
+\enumerate{
+\item a Mahalanobis gate testing whether the posterior center is separated
+from zero in the joint two-dimensional posterior;
+\item a practical-effect gate requiring sufficient posterior mass outside a
+user-defined radius around zero; and
+\item a star-region classifier that attributes supported changes to burst
+frequency, burst size, both, or an opposing trade-off.
+}
 
 Posterior draws from the two conditions are sampled independently, while
-`km` and `B` remain paired within each condition.
+\code{km} and \code{B} remain paired within each condition.
+}
+\section{Interpretation}{
+
+Log2 fold changes are condition 2 divided by condition 1. \code{call_change}
+requires both change gates; \code{mechanism_supported} addresses attribution
+after a change is supported. An unresolved mechanism differs from no
+supported change. The regions describe relative parameter contributions,
+not a requirement that the other parameter is exactly unchanged.
+}
+
+\examples{
+# Illustrative parameter draws; these are not fits to an RNA dataset.
+set.seed(1)
+make_result <- function(km, B) {
+  structure(data.frame(gene = "example"), samples = list(
+    km = exp(rnorm(1000, log(km), 0.08)),
+    B = exp(rnorm(1000, log(B), 0.08))
+  ))
+}
+reference <- make_result(km = 1, B = 2)
+perturbed <- make_result(km = 2, B = 2)
+comparison <- compare_posteriors_gate_star_kmB(
+  reference, perturbed, gene = "example", seed = 1, plot = FALSE
+)
+comparison$summary
+head(comparison$posterior)  # Log2 fold changes: perturbed / reference
+
+}
+\seealso{
+\code{run_kinetics_fits()}, \code{fit_gene()}
 }

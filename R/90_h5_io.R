@@ -90,7 +90,7 @@ write_one_gene_profile_from_disc <- function(h5_path, gene, q_list_gene, counts_
 #'
 #' @param samples_list Named list of numeric vectors (e.g. list(B=..., km=..., d=...)).
 #' @param truth_named Named numeric vector with names matching samples_list entries.
-#' @return Named numeric vector of PIT values in [0,1].
+#' @return Named numeric vector of PIT values in `[0,1]`.
 #' @keywords internal
 pit_from_samples <- function(samples_list, truth_named) {
   if (is.null(samples_list) || is.null(truth_named)) return(setNames(rep(NA_real_, length(truth_named)), names(truth_named)))

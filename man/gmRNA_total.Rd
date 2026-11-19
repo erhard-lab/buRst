@@ -25,3 +25,11 @@ Numeric matrix with columns total, new, and old.
 \description{
 Simulate joint total/new/old counts via Gillespie
 }
+\examples{
+set.seed(1)
+x <- gmRNA_total(n = 100, km = 1, B = 2, d = 0.5,
+                 t.end = 1, init = rep(4L, 100))
+head(x)
+stopifnot(all(x[, 1] == x[, 2] + x[, 3]))
+
+}

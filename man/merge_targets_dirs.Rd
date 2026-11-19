@@ -40,3 +40,18 @@ Invisibly, a manifest describing the merged directory.
 This performs a cell-wise merge. Both inputs must have identical genes and
 feature order, while their cell names must not overlap.
 }
+\examples{
+\dontrun{
+# Inputs must share their gene order and have distinct cell names.
+manifest <- merge_targets_dirs(
+  targets1 = "reference.targets", targets2 = "perturbed.targets",
+  output_targets = "combined.targets",
+  h5_filename = "4sU.Binom.discrete.h5", overwrite = FALSE
+)
+manifest
+}
+
+}
+\seealso{
+\code{SimulateReads()}, \code{write_10x_reference()}
+}

@@ -12,7 +12,7 @@ pit_from_samples(samples_list, truth_named)
 \item{truth_named}{Named numeric vector with names matching samples_list entries.}
 }
 \value{
-Named numeric vector of PIT values in [0,1].
+Named numeric vector of PIT values in \verb{[0,1]}.
 }
 \description{
 Compute PIT values for posterior samples against named truths

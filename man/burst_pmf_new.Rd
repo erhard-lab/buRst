@@ -25,7 +25,7 @@ burst_pmf_new(
 
 \item{B}{Mean burst size.}
 
-\item{N}{Optional FFT support size.}
+\item{N}{Optional initial FFT support size; tail checks may enlarge it.}
 
 \item{eps_tail}{Tail-mass proxy threshold.}
 
@@ -33,11 +33,31 @@ burst_pmf_new(
 
 \item{maxN}{Maximum value of N to consider.}
 
-\item{...}{Additional arguments passed to ...}
+\item{...}{Additional arguments forwarded to steady-state initialization,
+where applicable; otherwise reserved for compatibility.}
 }
 \value{
 data.frame with columns k and prob.
 }
 \description{
 PMF of newly synthesized RNA under bursting
+}
+\details{
+\code{km} and \code{d} are rates per unit time; \code{t_end} uses the same time unit.
+\code{B} is the mean number of molecules per burst. Newly synthesized RNA starts
+at zero at the beginning of the interval. Setting \code{t_end = Inf} gives the
+stationary RNA count distribution. Inspect \code{tail_converged} and \code{tail_proxy}
+attributes when checking numerical support; the tail criterion is a proxy.
+}
+\examples{
+p <- burst_pmf_new(t_end = 1, km = 1, B = 2, d = 0.5)
+head(p)
+sum(p$prob)
+sum(p$k * p$prob)  # Expected new RNA count
+plot(p$k, p$prob, type = "h", xlim = c(0, 20),
+     xlab = "New RNA molecules", ylab = "Probability")
+
+}
+\seealso{
+\code{burst_pmf_old()}, \code{burst_pmf_total()}, \code{simulate_distr_new()}
 }

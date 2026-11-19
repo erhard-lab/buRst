@@ -738,9 +738,9 @@
 
 # Fitting functions -----------------------------------------------------
 
-#' Fit bursting kinetics from posterior gene profiles
+#' Fit bursting kinetics from discrete labeling likelihoods
 #'
-#' Fits one gene in one condition using posterior gene profiles stored in HDF5.
+#' Fits one gene in one condition using discrete labeling likelihoods in HDF5.
 #' The optimization is performed in `(log(lambda), log(B), log(d))` space,
 #' where `lambda = B * km`, followed by a Laplace approximation.
 #'
@@ -764,6 +764,39 @@
 #'
 #' @return A one-row data frame. The fitted optimizer object, posterior draws,
 #'   and intervals are attached as attributes `fit`, `samples`, and `CI`.
+#' @details
+#' Retained gene and cell identifiers must match the HDF5/reference files.
+#' Filtering the grandR object is allowed; keep the original reference files
+#' and their ordering unchanged. The HDF5 directory must also contain matching
+#' `features.tsv.gz`, `barcodes.tsv.gz` and `matrix.mtx.gz` reference files.
+#'
+#' `km_hat` and `d_hat` are rates per unit time, `B_hat` is mean burst size,
+#' and `lambda_hat = km_hat * B_hat`. Columns ending in `_lo`, `_med` and `_hi`
+#' summarize local Laplace draws. These draws approximate local uncertainty;
+#' they are not samples from a full MCMC analysis.
+#'
+#' Check `conv` and `id_flag` before biological interpretation. In particular,
+#' `bad_hessian` or `strong_tradeoff` can indicate poorly resolved parameters.
+#' For a transient fit, the reference describes RNA at labeling onset and
+#' `t.diff` must equal `t.label`. Pre-labeling synthesis is not modeled.
+#'
+#' @seealso `fit_gene_MAP()`, `fit_gene_beta()`, `run_kinetics_batch()`
+#'
+#' @examples
+#' \dontrun{
+#' # Replace the prefix and condition columns for your experiment.
+#' d <- grandR::ReadGRAND3("path/to/scifate", read.posterior = FALSE)
+#' d <- grandR::FilterGenes(d, mincol = 50, minval = 1)
+#' d <- subset(d, no4sU == FALSE)
+#' grandR::Condition(d) <- c("Library", "Sample")
+#' fit <- fit_gene(
+#'   d, gene = "DUSP1", fit.cond = "A549 0h", t.label = 2,
+#'   steady = TRUE, h5_path = "path/to/scifate.targets/4sU.Binom.discrete.h5", ndraw = 2000, seed = 1
+#' )
+#' fit[, c("gene", "km_hat", "B_hat", "d_hat", "id_flag")]
+#' head(attr(fit, "samples")$km)
+#' }
+#'
 #' @export
 fit_gene <- function(
     data,
@@ -847,6 +880,24 @@ fit_gene <- function(
 #'
 #' @inheritParams fit_gene
 #' @return See [fit_gene()].
+#' @details
+#' This route treats estimated newly synthesized counts as exact observations.
+#' It does not integrate the full labeling likelihood and therefore represents
+#' a different measurement approximation from `fit_gene()`. The MAP label refers
+#' to the input new-RNA counts, not an MCMC fitting algorithm.
+#'
+#' @seealso `fit_gene()`, `fit_gene_beta()`, `fit_gene_truth()`
+#'
+#' @examples
+#' \dontrun{
+#' # d must contain estimated ntr values or a new.count slot.
+#' fit <- fit_gene_MAP(
+#'   data = d, gene = "gene_A", fit.cond = "sim", t.label = 1,
+#'   steady = TRUE, ndraw = 2000, seed = 1
+#' )
+#' fit[, c("gene", "km_hat", "B_hat", "d_hat", "id_flag")]
+#' }
+#'
 #' @export
 fit_gene_MAP <- function(
     data,
@@ -923,6 +974,23 @@ fit_gene_MAP <- function(
 #' @inheritParams fit_gene
 #' @param h5_path Retained for backward compatibility; not used.
 #' @return See [fit_gene()].
+#' @details
+#' This route is for validation with known new/old molecule counts. Experimental
+#' new-RNA point estimates should not be interpreted as known ground truth.
+#' Parameter and interval summaries otherwise follow `fit_gene()`.
+#'
+#' @seealso `fit_gene()`, `simulateBursting()`
+#'
+#' @examples
+#' \dontrun{
+#' # d must contain exact simulated new and old count slots.
+#' fit <- fit_gene_truth(
+#'   data = d, gene = "gene_A", fit.cond = "sim", t.label = 1,
+#'   steady = TRUE, ndraw = 2000, seed = 1
+#' )
+#' fit[, c("gene", "km_hat", "B_hat", "d_hat", "id_flag")]
+#' }
+#'
 #' @export
 fit_gene_truth <- function(
     data,

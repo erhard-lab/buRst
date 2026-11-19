@@ -23,3 +23,10 @@ Integer-like numeric vector of length n.
 \description{
 Simulate newly synthesized RNA counts via Gillespie
 }
+\examples{
+set.seed(1)
+x <- gmRNA_new(n = 100, km = 1, B = 2, d = 0.5, t.end = 1)
+head(x)
+mean(x)
+
+}

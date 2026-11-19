@@ -47,7 +47,7 @@ run_kinetics_batch_stat(
 \item{t.label}{Labeling duration.}
 
 \item{t.diff}{Modeled reference-to-observation interval for non-steady fits.
-Must equal `t.label`; pre-labeling synthesis is not modeled.}
+Must equal \code{t.label}; pre-labeling synthesis is not modeled.}
 
 \item{fit1_steady, fit2_steady}{Whether each fit uses the steady-state model.}
 
@@ -67,7 +67,7 @@ Must equal `t.label`; pre-labeling synthesis is not modeled.}
 
 \item{truth_suffix1, truth_suffix2}{Optional truth-column suffixes.}
 
-\item{plot_dir}{Optional directory for a `comparison$plot` ggplot.}
+\item{plot_dir}{Optional directory for a \code{comparison$plot} ggplot.}
 
 \item{verbose_every}{Print progress every this many genes; zero disables it.}
 
@@ -75,23 +75,51 @@ Must equal `t.label`; pre-labeling synthesis is not modeled.}
 
 \item{keep_only_unique_symbols}{Drop symbols mapping to multiple ENSG IDs.}
 
-\item{parallel}{Use `parallel::mclapply()` on non-Windows systems.}
+\item{parallel}{Use \code{parallel::mclapply()} on non-Windows systems.}
 
 \item{ncores}{Number of forked workers.}
 
 \item{timeout_sec}{Optional timeout per fit.}
 
-\item{on_timeout}{One of `"error"`, `"warn"`, or `"silent"`.}
+\item{on_timeout}{One of \code{"error"}, \code{"warn"}, or \code{"silent"}.}
 
-\item{compare_args}{Named arguments passed to `compare_fun` after the two fits.}
+\item{compare_args}{Named arguments passed to \code{compare_fun} after the two fits.}
 
 \item{reference}{Optional preloaded 10x reference. It is loaded once when
-omitted and `fit_fun` explicitly accepts a `reference` argument.}
+omitted and \code{fit_fun} explicitly accepts a \code{reference} argument.}
 }
 \value{
-The same structure as [run_kinetics_batch()], with `runtime_sec` and
-  `runtime_min` columns in `comparisons`.
+The same structure as \code{\link[=run_kinetics_batch]{run_kinetics_batch()}}, with \code{runtime_sec} and
+\code{runtime_min} columns in \code{comparisons}.
 }
 \description{
 Run bursting inference with per-gene runtime statistics
+}
+\details{
+Use this wrapper for timing comparisons that need the same fitting route as
+\code{run_kinetics_batch()}. Runtime depends on hardware, parallel execution and
+input size; it is not a measure of fit quality.
+}
+\examples{
+\dontrun{
+# Replace the prefix and condition columns for your experiment.
+d <- grandR::ReadGRAND3("path/to/scifate", read.posterior = FALSE)
+d <- grandR::FilterGenes(d, mincol = 50, minval = 1)
+d <- subset(d, no4sU == FALSE)
+grandR::Condition(d) <- c("Library", "Sample")
+out <- run_kinetics_batch_stat(
+  data = d, genes = c("DUSP1", "FKBP5"),
+  cond1 = "A549 0h", cond2 = "A549 2h", t.label = 2, t.diff = 2,
+  fit1_steady = TRUE, fit2_steady = FALSE, fit2_ref_cond = "A549 0h",
+  h5_path = "path/to/scifate.targets/4sU.Binom.discrete.h5", ndraw = 2000, seed = 1,
+  parallel = FALSE,
+  do_compare = TRUE, compare_args = list(plot = FALSE, seed = 1)
+)
+head(out$fits)
+head(out$comparisons)
+}
+
+}
+\seealso{
+\code{run_kinetics_batch()}
 }

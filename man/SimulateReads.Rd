@@ -85,11 +85,37 @@ features.tsv.gz.}
 }
 \value{
 The input grandR object with ntr_true, fitted ntr, and an attached
-  output manifest retrievable with \code{simulation_files()}.
+output manifest retrievable with \code{simulation_files()}.
 }
 \description{
 When \code{output_prefix} or \code{targets_dir} is supplied, a self-contained
 target directory is created. For example, \code{output_prefix="./out/sim"}
 creates \code{./out/sim.targets/} containing the HDF5 file and the standard
 10x matrix, barcode, and feature files.
+}
+\details{
+Use bundled output for later HDF5 fitting: \code{output_prefix} or \code{targets_dir}
+keeps the discrete profiles and their matching count/reference files together.
+Fitting inputs must retain the same gene and cell identifiers across files.
+\code{fit.beta = TRUE} additionally creates the \code{alpha} and \code{beta} slots used by
+\code{fit_gene_beta()}. All output paths in the example are temporary.
+}
+\examples{
+sim <- simulateBursting(
+  kms = 1, Bs = 2, ds = 0.5, t.end = 1, no.cells = 8,
+  gene.info = "gene_A", condition = "sim", ntr.sim = FALSE,
+  parallel = FALSE, seed = 1, on_gene_error = "stop"
+)
+work <- tempfile("buRst_reads_")
+dir.create(work)
+with_reads <- SimulateReads(
+  sim, output_prefix = file.path(work, "sim"),
+  parallel = FALSE, seed = 1, verbose_every = 0
+)
+simulation_files(with_reads)
+unlink(work, recursive = TRUE)
+
+}
+\seealso{
+\code{simulateBursting()}, \code{simulation_files()}, \code{write_10x_reference()}
 }

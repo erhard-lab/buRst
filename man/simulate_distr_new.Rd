@@ -32,3 +32,9 @@ Numeric vector of length n.
 \description{
 Simulate new RNA counts after a labeling interval
 }
+\examples{
+x <- simulate_distr_new(t.end = 1, km = 1, B = 2, d = 0.5,
+                        n = 100, seed = 1)
+summary(x)
+
+}

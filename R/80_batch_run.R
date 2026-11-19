@@ -862,6 +862,40 @@
 #' @param compare_args Named arguments passed to `compare_fun` after the two fits.
 #'
 #' @return A list containing `gene_map`, `genes_ok`, `fits`, and `comparisons`.
+#' @details
+#' Use a small gene list to check the input and condition names before fitting
+#' all genes. Keep the original cell population when reducing the gene list.
+#' `fits` contains per-condition parameter summaries and diagnostics;
+#' `comparisons` contains per-gene changes and mechanism support.
+#' Comparison log2 fold changes are oriented as condition 2 divided by condition 1.
+#'
+#' The batch runner discards full fit objects. Use `run_kinetics_fits()` when
+#' posterior draws or individual fitted objects are needed. `ndraw` controls
+#' local Laplace uncertainty summaries, not the number of optimizer iterations.
+#' Inspect both fitting failures and identification flags; a missing or unresolved
+#' mechanism is not evidence that the gene is unchanged.
+#'
+#' @seealso `run_kinetics_fits()`, `run_kinetics_batch_stat()`, `compare_posteriors_gate_star_kmB()`
+#'
+#' @examples
+#' \dontrun{
+#' # Replace the prefix and condition columns for your experiment.
+#' d <- grandR::ReadGRAND3("path/to/scifate", read.posterior = FALSE)
+#' d <- grandR::FilterGenes(d, mincol = 50, minval = 1)
+#' d <- subset(d, no4sU == FALSE)
+#' grandR::Condition(d) <- c("Library", "Sample")
+#' out <- run_kinetics_batch(
+#'   data = d, genes = c("DUSP1", "FKBP5"),
+#'   cond1 = "A549 0h", cond2 = "A549 2h", t.label = 2, t.diff = 2,
+#'   fit1_steady = TRUE, fit2_steady = FALSE, fit2_ref_cond = "A549 0h",
+#'   h5_path = "path/to/scifate.targets/4sU.Binom.discrete.h5", ndraw = 2000, seed = 1,
+#'   parallel = FALSE,
+#'   do_compare = TRUE, compare_args = list(plot = FALSE, seed = 1)
+#' )
+#' head(out$fits)
+#' head(out$comparisons)
+#' }
+#'
 #' @export
 run_kinetics_batch <- function(
     data,
@@ -937,6 +971,32 @@ run_kinetics_batch <- function(
 #'
 #' @return A list containing the flat summaries, per-condition metadata, and a
 #'   nested `fit_objects[[gene]][[condition]]` store.
+#' @details
+#' The nested `fit_objects[[gene]][[condition]]` entries retain the attributes
+#' needed by `compare_posteriors_gate_star_kmB()`. This can use substantially more
+#' memory than `run_kinetics_batch()`. Check `fit_meta` for unsuccessful conditions
+#' before indexing the fitted objects.
+#'
+#' @seealso `run_kinetics_batch()`, `compare_posteriors_gate_star_kmB()`
+#'
+#' @examples
+#' \dontrun{
+#' # Replace the prefix and condition columns for your experiment.
+#' d <- grandR::ReadGRAND3("path/to/scifate", read.posterior = FALSE)
+#' d <- grandR::FilterGenes(d, mincol = 50, minval = 1)
+#' d <- subset(d, no4sU == FALSE)
+#' grandR::Condition(d) <- c("Library", "Sample")
+#' out <- run_kinetics_fits(
+#'   data = d, genes = c("DUSP1", "FKBP5"),
+#'   cond1 = "A549 0h", cond2 = "A549 2h", t.label = 2, t.diff = 2,
+#'   fit1_steady = TRUE, fit2_steady = FALSE, fit2_ref_cond = "A549 0h",
+#'   h5_path = "path/to/scifate.targets/4sU.Binom.discrete.h5", ndraw = 2000, seed = 1,
+#'   parallel = FALSE
+#' )
+#' head(out$fits)
+#' out$fit_objects[["DUSP1"]][["A549 0h"]]
+#' }
+#'
 #' @export
 run_kinetics_fits <- function(
     data,
@@ -1007,6 +1067,32 @@ run_kinetics_fits <- function(
 #'
 #' @return The same structure as [run_kinetics_batch()], with `runtime_sec` and
 #'   `runtime_min` columns in `comparisons`.
+#' @details
+#' Use this wrapper for timing comparisons that need the same fitting route as
+#' `run_kinetics_batch()`. Runtime depends on hardware, parallel execution and
+#' input size; it is not a measure of fit quality.
+#'
+#' @seealso `run_kinetics_batch()`
+#'
+#' @examples
+#' \dontrun{
+#' # Replace the prefix and condition columns for your experiment.
+#' d <- grandR::ReadGRAND3("path/to/scifate", read.posterior = FALSE)
+#' d <- grandR::FilterGenes(d, mincol = 50, minval = 1)
+#' d <- subset(d, no4sU == FALSE)
+#' grandR::Condition(d) <- c("Library", "Sample")
+#' out <- run_kinetics_batch_stat(
+#'   data = d, genes = c("DUSP1", "FKBP5"),
+#'   cond1 = "A549 0h", cond2 = "A549 2h", t.label = 2, t.diff = 2,
+#'   fit1_steady = TRUE, fit2_steady = FALSE, fit2_ref_cond = "A549 0h",
+#'   h5_path = "path/to/scifate.targets/4sU.Binom.discrete.h5", ndraw = 2000, seed = 1,
+#'   parallel = FALSE,
+#'   do_compare = TRUE, compare_args = list(plot = FALSE, seed = 1)
+#' )
+#' head(out$fits)
+#' head(out$comparisons)
+#' }
+#'
 #' @export
 run_kinetics_batch_stat <- function(
     data,

@@ -4,12 +4,29 @@
 \name{buRst-package}
 \alias{buRst}
 \alias{buRst-package}
-\title{buRst}
+\title{buRst: Transcriptional Bursting Inference from Metabolic RNA Labeling}
 \description{
-Methods to infer transcriptional bursting parameters (burst size and burst frequency) from scSLAM-seq data by combining discrete likelihood profiles with mechanistic RNA count distributions under a bursting model.
+Infer burst frequency, mean burst size and RNA degradation rates from
+single-cell metabolic RNA-labeling measurements. Supports steady-state and
+transient models, uncertainty summaries, simulation and condition comparisons.
+}
+\details{
+Start with the \code{bursting_same_mean} vignette for the forward model,
+\code{inference} for experimental fitting, and \code{simulation} for controlled examples.
+The full inference route integrates discrete labeling likelihoods and uses a
+local Laplace approximation for kinetic-parameter uncertainty.
+}
+\seealso{
+\code{run_kinetics_batch()}, \code{simulateBursting()},
+\code{compare_posteriors_gate_star_kmB()}
 }
 \author{
 \strong{Maintainer}: Teresa Rummel \email{teresa.rummel@ur.de}
+
+Authors:
+\itemize{
+  \item Florian Erhard \email{Florian.Erhard@informatik.uni-regensburg.de} (\href{https://orcid.org/0000-0002-3574-6983}{ORCID})
+}
 
 }
 \keyword{internal}

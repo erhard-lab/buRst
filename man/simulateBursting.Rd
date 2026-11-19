@@ -69,3 +69,31 @@ A grandR object.
 \description{
 Simulate bursting counts and optionally simulate read evidence
 }
+\details{
+Vectors \code{kms}, \code{Bs} and \code{ds} must have the same length and order as the genes.
+\code{kms} and \code{ds} are rates in the reciprocal time unit used for \code{t.end}.
+When \code{steady = FALSE}, supply a genes-by-cells matrix or one count vector per
+gene as \code{init}; these are the molecules present at the start of the interval.
+
+With \code{ntr.sim = FALSE}, the result contains simulated \code{count}, \code{new}, \code{old}
+and \code{ntr} slots without creating labeling-evidence files. With \code{ntr.sim = TRUE},
+read-evidence settings and export paths can be passed through \code{...} to
+\code{SimulateReads()}. Use \code{simulation_files()} to retrieve generated paths.
+\code{on_gene_error = "stop"} is useful when validating an example, to avoid
+replacing a failed simulation by zeros.
+}
+\examples{
+# Count simulation only: no HDF5 files or read evidence are written.
+sim <- simulateBursting(
+  kms = c(1, 2), Bs = c(2, 1), ds = c(0.5, 0.5),
+  gene.info = c("gene_A", "gene_B"), t.end = 1, no.cells = 40,
+  condition = "control", ntr.sim = FALSE, parallel = FALSE,
+  seed = 1, on_gene_error = "stop"
+)
+head(grandR::Coldata(sim))
+grandR::GetMatrix(sim, mode.slot = "count")[, 1:4]
+
+}
+\seealso{
+\code{SimulateReads()}, \code{simulation_files()}, \code{simulate_distr_total()}
+}

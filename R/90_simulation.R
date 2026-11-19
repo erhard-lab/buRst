@@ -461,6 +461,25 @@ NULL
 #'   explicitly required.
 #'
 #' @return Named paths to matrix, barcode, and feature files.
+#' @details
+#' The exported gene order and cell identifiers must match the likelihood file
+#' used for fitting. The default `barcode_column = "Name"` preserves full cell
+#' identifiers. Do not replace them by raw barcode substrings unless all other
+#' files use those exact same identifiers.
+#'
+#' @seealso `SimulateReads()`, `merge_targets_dirs()`
+#'
+#' @examples
+#' sim <- simulateBursting(
+#'   kms = 1, Bs = 2, ds = 0.5, t.end = 1, no.cells = 8,
+#'   gene.info = "gene_A", condition = "sim", ntr.sim = FALSE,
+#'   parallel = FALSE, seed = 1, on_gene_error = "stop"
+#' )
+#' work <- tempfile("buRst_reference_")
+#' files <- write_10x_reference(sim, output_dir = work)
+#' file.exists(unlist(files))
+#' unlink(work, recursive = TRUE)
+#'
 #' @export
 write_10x_reference <- function(
     data,
@@ -526,6 +545,21 @@ write_10x_reference <- function(
 #' @param data A grandR object returned by \code{SimulateReads()}.
 #'
 #' @return A named list of paths, or \code{NULL} when no manifest is attached.
+#' @details
+#' Count-only simulations do not create an output manifest. After `SimulateReads()`
+#' or a read-evidence simulation, this list records the actual exported paths;
+#' it does not copy or recreate the files.
+#'
+#' @seealso `SimulateReads()`, `simulateBursting()`
+#'
+#' @examples
+#' sim <- simulateBursting(
+#'   kms = 1, Bs = 2, ds = 0.5, t.end = 1, no.cells = 8,
+#'   gene.info = "gene_A", condition = "sim", ntr.sim = FALSE,
+#'   parallel = FALSE, seed = 1, on_gene_error = "stop"
+#' )
+#' simulation_files(sim)  # NULL: no read-evidence export has been requested.
+#'
 #' @export
 simulation_files <- function(data) {
   attr(data, "buRst_simulation_files", exact = TRUE)
@@ -545,6 +579,12 @@ simulation_files <- function(data) {
 #' @param t.end Labeling duration.
 #'
 #' @return Integer-like numeric vector of length n.
+#' @examples
+#' set.seed(1)
+#' x <- gmRNA_new(n = 100, km = 1, B = 2, d = 0.5, t.end = 1)
+#' head(x)
+#' mean(x)
+#'
 #' @export
 gmRNA_new <- function(n, km, B, d, t.end) {
   cpp_gmRNA_new(n, km, B, d, t.end)
@@ -559,6 +599,11 @@ gmRNA_new <- function(n, km, B, d, t.end) {
 #' @param init Integer vector of initial old counts at t=0.
 #'
 #' @return Integer-like numeric vector of length n.
+#' @examples
+#' set.seed(1)
+#' x <- gmRNA_old(n = 100, d = 0.5, t.end = 1, init = rep(4L, 100))
+#' range(x)  # Surviving counts cannot exceed their initial counts.
+#'
 #' @export
 gmRNA_old <- function(n, d, t.end, init) {
   cpp_gmRNA_old(n = n, d = d, tend = t.end, init = init)
@@ -575,6 +620,13 @@ gmRNA_old <- function(n, d, t.end, init) {
 #' @param init Integer vector of initial old counts at t=0.
 #'
 #' @return Numeric matrix with columns total, new, and old.
+#' @examples
+#' set.seed(1)
+#' x <- gmRNA_total(n = 100, km = 1, B = 2, d = 0.5,
+#'                  t.end = 1, init = rep(4L, 100))
+#' head(x)
+#' stopifnot(all(x[, 1] == x[, 2] + x[, 3]))
+#'
 #' @export
 gmRNA_total <- function(n, km, B, d, t.end, init) {
   cpp_gmRNA_joint(
@@ -604,6 +656,22 @@ gmRNA_total <- function(n, km, B, d, t.end, init) {
 #' @param prefix Prefix stored in the grandR object.
 #'
 #' @return A grandR object.
+#' @details
+#' Rows are genes and columns are cells. The corresponding row of `df_vals`
+#' contains that gene's true parameters. The returned `count` slot is `new + old`;
+#' the `ntr` slot is the new-to-total ratio, with zero for zero total counts.
+#' True parameter columns use names such as `true_B.t0`.
+#'
+#' @seealso `simulateBursting()`, `write_10x_reference()`
+#'
+#' @examples
+#' new <- matrix(c(0, 1, 2, 1, 0, 1), nrow = 2, byrow = TRUE)
+#' old <- matrix(c(2, 1, 0, 3, 2, 1), nrow = 2, byrow = TRUE)
+#' truth <- data.frame(kms = c(1, 2), Bs = c(2, 1), ds = c(0.5, 0.5))
+#' sim <- simulation_to_grandR(new, old, truth,
+#'                             gene.info = c("gene_A", "gene_B"))
+#' grandR::GetMatrix(sim, mode.slot = "count")
+#'
 #' @export
 simulation_to_grandR <- function(
     new,
@@ -747,6 +815,11 @@ simulation_to_grandR <- function(
 #' @param seed Optional seed.
 #'
 #' @return Numeric vector of length n.
+#' @examples
+#' x <- simulate_distr_old(t.end = 1, d = 0.5, n = 100,
+#'                         steady = FALSE, init = rep(4L, 100), seed = 1)
+#' mean(x)
+#'
 #' @export
 simulate_distr_old <- function(
     t.end = 2,
@@ -788,6 +861,11 @@ simulate_distr_old <- function(
 #' @param seed Optional seed.
 #'
 #' @return Numeric vector of length n.
+#' @examples
+#' x <- simulate_distr_new(t.end = 1, km = 1, B = 2, d = 0.5,
+#'                         n = 100, seed = 1)
+#' summary(x)
+#'
 #' @export
 simulate_distr_new <- function(
     t.end = 2,
@@ -814,6 +892,12 @@ simulate_distr_new <- function(
 #' @param seed Optional seed.
 #'
 #' @return A list with total, new, and old vectors.
+#' @examples
+#' x <- simulate_distr_total(km = 1, B = 2, d = 0.5,
+#'                           n = 100, t.end = 1, seed = 1)
+#' head(data.frame(x))
+#' stopifnot(all(x$total == x$new + x$old))
+#'
 #' @export
 simulate_distr_total <- function(
     km = 3,
@@ -885,6 +969,32 @@ simulate_distr_total <- function(
 #' @param ... Passed to \code{SimulateReads()} when \code{ntr.sim=TRUE}.
 #'
 #' @return A grandR object.
+#' @details
+#' Vectors `kms`, `Bs` and `ds` must have the same length and order as the genes.
+#' `kms` and `ds` are rates in the reciprocal time unit used for `t.end`.
+#' When `steady = FALSE`, supply a genes-by-cells matrix or one count vector per
+#' gene as `init`; these are the molecules present at the start of the interval.
+#'
+#' With `ntr.sim = FALSE`, the result contains simulated `count`, `new`, `old`
+#' and `ntr` slots without creating labeling-evidence files. With `ntr.sim = TRUE`,
+#' read-evidence settings and export paths can be passed through `...` to
+#' `SimulateReads()`. Use `simulation_files()` to retrieve generated paths.
+#' `on_gene_error = "stop"` is useful when validating an example, to avoid
+#' replacing a failed simulation by zeros.
+#'
+#' @seealso `SimulateReads()`, `simulation_files()`, `simulate_distr_total()`
+#'
+#' @examples
+#' # Count simulation only: no HDF5 files or read evidence are written.
+#' sim <- simulateBursting(
+#'   kms = c(1, 2), Bs = c(2, 1), ds = c(0.5, 0.5),
+#'   gene.info = c("gene_A", "gene_B"), t.end = 1, no.cells = 40,
+#'   condition = "control", ntr.sim = FALSE, parallel = FALSE,
+#'   seed = 1, on_gene_error = "stop"
+#' )
+#' head(grandR::Coldata(sim))
+#' grandR::GetMatrix(sim, mode.slot = "count")[, 1:4]
+#'
 #' @export
 simulateBursting <- function(
     kms,
@@ -1122,6 +1232,30 @@ simulateBursting <- function(
 #'
 #' @return The input grandR object with ntr_true, fitted ntr, and an attached
 #'   output manifest retrievable with \code{simulation_files()}.
+#' @details
+#' Use bundled output for later HDF5 fitting: `output_prefix` or `targets_dir`
+#' keeps the discrete profiles and their matching count/reference files together.
+#' Fitting inputs must retain the same gene and cell identifiers across files.
+#' `fit.beta = TRUE` additionally creates the `alpha` and `beta` slots used by
+#' `fit_gene_beta()`. All output paths in the example are temporary.
+#'
+#' @seealso `simulateBursting()`, `simulation_files()`, `write_10x_reference()`
+#'
+#' @examples
+#' sim <- simulateBursting(
+#'   kms = 1, Bs = 2, ds = 0.5, t.end = 1, no.cells = 8,
+#'   gene.info = "gene_A", condition = "sim", ntr.sim = FALSE,
+#'   parallel = FALSE, seed = 1, on_gene_error = "stop"
+#' )
+#' work <- tempfile("buRst_reads_")
+#' dir.create(work)
+#' with_reads <- SimulateReads(
+#'   sim, output_prefix = file.path(work, "sim"),
+#'   parallel = FALSE, seed = 1, verbose_every = 0
+#' )
+#' simulation_files(with_reads)
+#' unlink(work, recursive = TRUE)
+#'
 #' @export
 SimulateReads <- function(
     data,

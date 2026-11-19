@@ -246,6 +246,23 @@ make_gp_from_beta <- function(
 #' @inheritParams fit_gene
 #'
 #' @return See fit_gene().
+#' @details
+#' This route uses the `alpha` and `beta` slots of the same genes and cells as
+#' the count data. It approximates labeling uncertainty and is distinct from
+#' the discrete-likelihood route in `fit_gene()`. `h5_path` is not required.
+#'
+#' @seealso `fit_gene()`, `fit_gene_MAP()`, `SimulateReads()`
+#'
+#' @examples
+#' \dontrun{
+#' # d must contain per-cell alpha and beta slots.
+#' fit <- fit_gene_beta(
+#'   data = d, gene = "gene_A", fit.cond = "sim", t.label = 1,
+#'   steady = TRUE, ndraw = 2000, seed = 1
+#' )
+#' fit[, c("gene", "km_hat", "B_hat", "d_hat", "id_flag")]
+#' }
+#'
 #' @export
 fit_gene_beta <- function(
     data,

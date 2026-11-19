@@ -39,6 +39,16 @@ G <- function(x, t.end, d, val, prob) {
 #' @param B Optional known burst size.
 #' @param km Optional known burst frequency.
 #' @return Named numeric vector c(B=..., km=...).
+#' @details
+#' The moments describe counts per cell in the reference and final populations.
+#' This moment-based result is an initialization, not a likelihood fit or an
+#' uncertainty estimate. Supply time and rate values in consistent units.
+#'
+#' @examples
+#' # d, final mean/variance, and reference mean/variance.
+#' params <- c(d = 0.5, m = 5, v = 15, m_0 = 4, v_0 = 12)
+#' initial_params_noss(params, t.end = 1, B = 2)
+#'
 #' @export
 initial_params_noss <- function(params, t.end, B = NULL, km = NULL) {
   d   <- params[1]
@@ -74,7 +84,7 @@ initial_params_noss <- function(params, t.end, B = NULL, km = NULL) {
 
 #' Estimate an initial degradation rate
 #'
-#' @param ntr Aggregate new-to-total RNA ratio in [0, 1].
+#' @param ntr Aggregate new-to-total RNA ratio in `[0, 1]`.
 #' @param total Mean total RNA count in the fitted population.
 #' @param t Positive labeling duration.
 #' @param t0 Modeled reference-to-observation duration; must equal t.

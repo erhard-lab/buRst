@@ -1,6 +1,19 @@
 # Shared numerical utilities.
 
-#' buRst
+#' buRst: Transcriptional Bursting Inference from Metabolic RNA Labeling
+#'
+#' Infer burst frequency, mean burst size and RNA degradation rates from
+#' single-cell metabolic RNA-labeling measurements. Supports steady-state and
+#' transient models, uncertainty summaries, simulation and condition comparisons.
+#'
+#' @details
+#' Start with the `bursting_same_mean` vignette for the forward model,
+#' `inference` for experimental fitting, and `simulation` for controlled examples.
+#' The full inference route integrates discrete labeling likelihoods and uses a
+#' local Laplace approximation for kinetic-parameter uncertainty.
+#'
+#' @seealso `run_kinetics_batch()`, `simulateBursting()`,
+#'   `compare_posteriors_gate_star_kmB()`
 #'
 #' @importFrom stats dbinom fft integrate optimize quantile setNames uniroot
 #' @importFrom utils head read.delim tail

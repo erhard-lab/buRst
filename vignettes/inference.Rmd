@@ -1,236 +1,234 @@
 ---
-title: "Inferring transcriptional bursting parameters with buRst"
-output: rmarkdown::html_vignette
+title: "Fit bursting kinetics to scSLAM-seq data"
+subtitle: "Match GRAND3 inputs, check both fits, and interpret the change"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+    css: buRst-vignette.css
 vignette: >
-  %\VignetteIndexEntry{Inferring transcriptional bursting parameters with buRst}
+  %\VignetteIndexEntry{Fit bursting kinetics to scSLAM-seq data}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
+                      fig.width = 7, fig.height = 5, fig.align = "center")
 ```
 
-## Overview
+<nav class="tutorial-nav" aria-label="buRst vignettes">
+<a href="bursting_same_mean.html">Count distributions</a>
+<a href="simulation.html">Simulate counts</a>
+<a href="acute_pertubation.html">Acute perturbation</a>
+<a href="inference.html" aria-current="page">Fit scSLAM-seq data</a>
+</nav>
 
-`buRst` provides methods for inferring transcriptional bursting parameters from scSLAM-seq data.
+Start with processed GRAND3 counts and their matching discrete labeling
+likelihoods. This example uses a two-hour sci-fate contrast to estimate
+bursting kinetics in each condition and ask whether burst frequency, burst
+size, or both changed.
 
-The package combines mechanistic RNA count distributions with discrete likelihood profiles to estimate parameters describing transcriptional bursting, in particular burst frequency and burst size.
+| Parameter | Meaning | Units when time is in hours |
+|---|---|---|
+| `km` | Burst initiation rate | Per hour |
+| `B` | Mean transcripts per burst | Molecules per burst |
+| `d` | RNA degradation rate | Per hour |
+| `lambda = km * B` | Mean synthesis rate | Molecules per hour |
 
-This vignette demonstrates a typical `buRst` analysis using scSLAM-seq data stored as a `grandR` object. The workflow consists of:
+> Supply your own GRAND3 files to run sections 1–3. Section 4 runs on
+> constructed draws and shows how to read the comparison output. For a complete
+> example with generated inputs, see [acute perturbation](acute_pertubation.html).
 
-1. loading and filtering the scSLAM-seq data;
-2. defining the experimental conditions;
-3. fitting the bursting model for individual genes;
-4. inspecting the resulting parameter estimates and model diagnostics.
-
-## Loading the packages
-
-```{r}
+```{r packages}
 library(buRst)
 library(grandR)
-library(dplyr)
 ```
 
-`buRst` operates on scSLAM-seq count data represented using the data structures provided by `grandR`.
+## 1. Match counts to labeling likelihoods
 
-## Preparing scSLAM-seq data
+The full-likelihood fit reads the Binom HDF5 file using the count, gene, and
+cell references in the same `.targets` directory.
 
-For example, GRAND-SLAM/GRAND3 output can be read using `grandR`:
-
-```{r, eval = FALSE}
-d <- ReadGRAND3("path/to/grand3/output")
+```text
+scifate.targets/
+  matrix.mtx.gz
+  features.tsv.gz
+  barcodes.tsv.gz
+  4sU.Binom.discrete.h5
 ```
 
-Before fitting the bursting model, genes with very little information can be removed. In the analysis shown here, genes were retained if at least 50 cells contained a count of at least one:
+Keep the original order and identifiers in the target files. You can filter
+genes and cells in the `grandR` object while keeping the original HDF5 and
+references. The HDF5 supplies labeling likelihoods directly, so set
+`read.posterior = FALSE` when loading the data.
 
-```{r, eval = FALSE}
-d <- FilterGenes(
-  d,
-  mincol = 50,
-  minval = 1
-)
+```{r read-input, eval=FALSE}
+prefix <- "path/to/scifate"
+d <- grandR::ReadGRAND3(prefix, read.posterior = FALSE)
+d <- grandR::FilterGenes(d, mincol = 50, minval = 1)
+d <- subset(d, no4sU == FALSE)
+grandR::Condition(d) <- c("Library", "Sample")
+
+table(grandR::Coldata(d)$Condition)
+h5_path <- file.path(paste0(prefix, ".targets"), "4sU.Binom.discrete.h5")
+stopifnot(file.exists(h5_path))
 ```
 
-Cells without 4sU labeling information are then removed:
+This template keeps genes detected in at least 50 cells before subsetting to
+labeled cells. Use the printed condition labels exactly as they appear in your
+data and check that both groups contain cells.
 
-```{r, eval = FALSE}
-d <- subset(
-  d,
-  no4sU == FALSE
-)
-```
+## 2. Fit a two-gene contrast
 
-Finally, the experimental conditions used for the analysis are defined:
+This example compares A549 cells at 0 h and 2 h. The first condition is a
+steady-state reference; the second evolves from that reference after a change
+in kinetic parameters.
 
-```{r, eval = FALSE}
-Condition(d) <- c(
-  "Library",
-  "Sample"
-)
-```
-
-The exact filtering strategy and condition variables will depend on the experimental design.
-
-## Fitting transcriptional bursting parameters
-
-The main workflow for fitting multiple genes is provided by `run_kinetics_batch()`.
-
-As an example, consider a comparison between A549 cells at 0 h and 2 h:
-
-```{r, eval = FALSE}
+```{r fit-batch, eval=FALSE}
 out <- run_kinetics_batch(
   data = d,
-  genes = Genes(d),
+  genes = c("DUSP1", "FKBP5"),
   cond1 = "A549 0h",
   cond2 = "A549 2h",
   t.label = 2,
   t.diff = 2,
   fit1_steady = TRUE,
   fit2_steady = FALSE,
-  fit1_ref_cond = NULL,
   fit2_ref_cond = "A549 0h",
-  h5_path = "path/to/4sU.Binom.discrete.h5",
+  h5_path = h5_path,
   ndraw = 20000,
   seed = 123,
   do_compare = TRUE,
-  verbose_every = 50,
-  require_h5 = TRUE,
-  keep_only_unique_symbols = TRUE,
-  parallel = TRUE,
-  ncores = 4,
-  timeout_sec = 300
+  compare_args = list(plot = FALSE, seed = 123),
+  parallel = FALSE,
+  timeout_sec = 300,
+  verbose_every = 1
 )
 ```
 
-Here, the first condition is treated as a steady-state reference, whereas the second condition is modeled as a non-steady-state condition originating from the reference state.
+> **Transient timing.** Set `t.diff` equal to `t.label`. The model starts with
+> the reference RNA population at labeling onset and assumes the kinetic change
+> starts then.
 
-The labeling time is specified using `t.label`. In this example, cells were labeled for 2 hours. For non-steady-state inference, `t.diff` must equal `t.label`: the reference represents RNA at labeling onset. The current model does not include synthesis in an interval before labeling.
+Once these fits complete, use the same settings with a larger gene list.
+`ndraw` sets the number of local Laplace draws used to summarize uncertainty.
 
-For a full analysis, `ndraw = 20000` can be used to summarize the local Laplace uncertainty. Smaller values may be useful when testing a workflow.
+## 3. Check the condition fits
 
-## Understanding the main arguments
+Use the comparison table to find failed fits and comparison errors. The fit
+table contains the returned estimates and identification flags. It can be empty
+if all fits fail.
 
-Several arguments control how the two conditions are fitted.
-
-`fit1_steady` and `fit2_steady` specify whether a condition is assumed to be in steady state. In the example above, the 0 h condition is fitted under a steady-state model, whereas the 2 h condition is allowed to deviate from steady state.
-
-For a non-steady-state condition, `fit2_ref_cond` specifies the condition that provides the initial state. Here, the transcriptional state at 0 h is used as the reference for fitting the 2 h condition.
-
-The `h5_path` argument points to the discrete likelihood information generated for the corresponding scSLAM-seq experiment.
-
-When `do_compare = TRUE`, `buRst` additionally evaluates changes in bursting parameters between the two fitted conditions.
-
-## Inspecting the results
-
-`run_kinetics_batch()` returns the fitted parameter estimates together with diagnostic information.
-
-```{r, eval = FALSE}
-out
+```{r inspect-results, eval=FALSE}
+out$comparisons
+if (nrow(out$fits)) {
+  fields <- c("gene", "fit_cond", "km_hat", "B_hat", "d_hat", "conv", "id_flag")
+  out$fits[, fields]
+}
 ```
 
-Gene-level fits are stored in:
+| Output | How to read it |
+|---|---|
+| `*_hat` | Fitted parameter estimate |
+| `*_lo`, `*_med`, `*_hi` | 2.5th, 50th, and 97.5th percentiles of local Laplace draws |
+| `conv` | Optimizer convergence code. Zero indicates convergence. |
+| `id_flag` | Identification diagnostic. Inspect `bad_hessian`, `strong_tradeoff`, and missing flags before interpretation. |
+| `ok` in comparisons | Whether the required fits and comparison completed |
 
-```{r, eval = FALSE}
-out$fits
-```
+Check both conditions for each gene. Local Laplace draws approximate the
+uncertainty around the fitted optimum. When frequency and size trade off
+strongly, the data can support a range of combinations with similar likelihood.
 
-For example, results for the steady-state reference condition can be selected using `dplyr`:
+### Retrieve draws for an individual gene
 
-```{r, eval = FALSE}
-fit_0h <- out$fits %>%
-  filter(fit_cond == "A549 0h")
-```
+`run_kinetics_batch()` returns compact tables. Use `run_kinetics_fits()` to
+retain the fitted objects and their posterior draws:
 
-The fitted quantities include estimates of the burst parameters and RNA degradation rate. For example:
-
-```{r, eval = FALSE}
-fit_0h %>%
-  select(
-    gene,
-    km_hat,
-    B_hat,
-    d_hat,
-    id_flag
-  ) %>%
-  head()
-```
-
-Here, `km_hat` represents the fitted burst frequency, `B_hat` the fitted burst size, and `d_hat` the RNA degradation rate.
-
-## Fit diagnostics
-
-Not every gene necessarily contains enough information to identify all bursting parameters reliably. `buRst` therefore reports diagnostic information in `id_flag`.
-
-For example, fits flagged because of an ill-conditioned Hessian or a strong parameter trade-off can be excluded from downstream analyses:
-
-```{r, eval = FALSE}
-fit_0h_filtered <- fit_0h %>%
-  filter(
-    !id_flag %in% c(
-      "bad_hessian",
-      "strong_tradeoff"
-    )
-  )
-```
-
-These diagnostics are particularly important because burst frequency and burst size can be difficult to distinguish for genes whose observed count distributions provide limited information about the underlying parameters.
-
-## Using fitted parameters for downstream analyses
-
-The resulting parameter estimates can be used to study transcriptional regulation across genes or conditions.
-
-For example, high-confidence estimates can be extracted as:
-
-```{r, eval = FALSE}
-parameters <- fit_0h_filtered %>%
-  select(
-    gene,
-    km_hat,
-    B_hat,
-    d_hat
-  )
-```
-
-These estimates can also be used as parameters for simulations with `simulateBursting()`, which is described in a separate vignette.
-
-## A smaller test run
-
-A full genome-wide analysis can be computationally intensive. When setting up an analysis, it is therefore useful to first test the workflow on a small set of genes:
-
-```{r, eval = FALSE}
-test_genes <- head(
-  Genes(d),
-  10
-)
-
-test_fit <- run_kinetics_batch(
-  data = d,
-  genes = test_genes,
-  cond1 = "A549 0h",
-  cond2 = "A549 2h",
-  t.label = 2,
-  t.diff = 2,
-  fit1_steady = TRUE,
-  fit2_steady = FALSE,
-  fit1_ref_cond = NULL,
+```{r retain-objects, eval=FALSE}
+fits <- run_kinetics_fits(
+  data = d, genes = "DUSP1",
+  cond1 = "A549 0h", cond2 = "A549 2h",
+  t.label = 2, t.diff = 2,
+  fit1_steady = TRUE, fit2_steady = FALSE,
   fit2_ref_cond = "A549 0h",
-  h5_path = "path/to/4sU.Binom.discrete.h5",
-  ndraw = 1000,
-  seed = 123,
-  do_compare = TRUE,
-  require_h5 = TRUE,
+  h5_path = h5_path, ndraw = 20000, seed = 123,
   parallel = FALSE
 )
+fits$fit_meta
+
+pair <- fits$fit_objects[["DUSP1"]]
+if (all(c("A549 0h", "A549 2h") %in% names(pair))) {
+  print(fits$fits[, c("fit_cond", "conv", "id_flag")])
+}
 ```
 
-Once the input and experimental setup have been verified, the same workflow can be applied to the complete set of genes using a larger number of likelihood draws and, where appropriate, parallel processing.
+After checking convergence and identification in both conditions, run the
+comparison on the retained pair.
 
-## Next steps
+```{r compare-one-gene, eval=FALSE}
+comparison <- compare_posteriors_gate_star_kmB(
+  pair[["A549 0h"]], pair[["A549 2h"]],
+  gene = "DUSP1", seed = 123, plot = TRUE
+)
+comparison$summary
+comparison$plot
+```
 
-The fitted bursting parameters can be used directly for biological comparisons or as the basis for simulation and model validation.
+The comparison pairs draws across conditions independently and keeps each
+condition's frequency and size draws together. A positive log2 fold change
+means the parameter is higher in **condition 2**.
 
-See the simulation vignette for examples of using `simulateBursting()` to generate scSLAM-seq data from fitted burst frequency, burst size, and degradation-rate parameters.
+## 4. Read change and mechanism together
+
+The example below constructs correlated draws around a twofold frequency
+increase. The points show uncertainty in the two log2 fold changes together.
+
+```{r illustrative-comparison}
+set.seed(1)
+make_result <- function(km, B, n = 1500) {
+  u <- rnorm(n)
+  v <- rnorm(n)
+  draws <- list(
+    km = exp(log(km) + 0.12 * u),
+    B = exp(log(B) - 0.08 * u + 0.08 * v)
+  )
+  structure(data.frame(gene = "illustration"), samples = draws)
+}
+reference <- make_result(km = 1, B = 2)
+perturbed <- make_result(km = 2, B = 2)
+comparison <- compare_posteriors_gate_star_kmB(
+  reference, perturbed, gene = "Illustrative frequency increase",
+  seed = 1, plot = TRUE, max_plot_points = 1000, grid_n = 120
+)
+fields <- c("call_change", "attrib_ok", "top_mechanism", "mechanism_supported")
+knitr::kable(comparison$summary[, fields])
+```
+
+```{r plot-comparison, fig.cap="Illustrative joint log2 fold-change draws. The cross marks the posterior medians; colored regions describe the relative contributions of frequency and size."}
+comparison$plot + ggplot2::labs(caption = NULL)
+```
+
+| Read in this order | What it tells you |
+|---|---|
+| `call_change` | Whether joint evidence and practical effect size support a change |
+| `attrib_ok` | Whether attribution passes the optional interval-width check |
+| `mechanism_supported` | Whether the leading mechanism meets the configured support threshold |
+| `top_mechanism` | Leading region among the changed draws |
+
+Interpret the leading mechanism when change and attribution are supported.
+If `call_change` is true and attribution lacks support, report a change with
+unresolved mechanism. Keep failed comparisons separate from completed
+comparisons with no supported change.
+
+## 5. Save the results
+
+```{r save-results, eval=FALSE}
+saveRDS(out, "bursting_results.rds")
+```
+
+Keep a record of the fit settings, condition cell counts, and session info so
+you can reproduce the comparison.
+
+**Continue with** the [acute-perturbation experiment](acute_pertubation.html)
+to see how these checks work with known changes in both parameters.

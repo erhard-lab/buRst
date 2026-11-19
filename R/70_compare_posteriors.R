@@ -388,6 +388,32 @@
 #' }
 #'
 #' @importFrom rlang .data
+#' @seealso `run_kinetics_fits()`, `fit_gene()`
+#'
+#' @section Interpretation:
+#' Log2 fold changes are condition 2 divided by condition 1. `call_change`
+#' requires both change gates; `mechanism_supported` addresses attribution
+#' after a change is supported. An unresolved mechanism differs from no
+#' supported change. The regions describe relative parameter contributions,
+#' not a requirement that the other parameter is exactly unchanged.
+#'
+#' @examples
+#' # Illustrative parameter draws; these are not fits to an RNA dataset.
+#' set.seed(1)
+#' make_result <- function(km, B) {
+#'   structure(data.frame(gene = "example"), samples = list(
+#'     km = exp(rnorm(1000, log(km), 0.08)),
+#'     B = exp(rnorm(1000, log(B), 0.08))
+#'   ))
+#' }
+#' reference <- make_result(km = 1, B = 2)
+#' perturbed <- make_result(km = 2, B = 2)
+#' comparison <- compare_posteriors_gate_star_kmB(
+#'   reference, perturbed, gene = "example", seed = 1, plot = FALSE
+#' )
+#' comparison$summary
+#' head(comparison$posterior)  # Log2 fold changes: perturbed / reference
+#'
 #' @export
 compare_posteriors_gate_star_kmB <- function(
     res1,

@@ -28,16 +28,16 @@ fit_gene_beta(
 
 \item{gene}{Gene symbol or ENSG identifier.}
 
-\item{fit.cond}{Condition to fit; must match `Coldata(data)$Condition`.}
+\item{fit.cond}{Condition to fit; must match \code{Coldata(data)$Condition}.}
 
 \item{t.label}{Labeling duration.}
 
 \item{steady}{Whether to use the steady-state model.}
 
-\item{ref.cond}{Reference condition used when `steady = FALSE`.}
+\item{ref.cond}{Reference condition used when \code{steady = FALSE}.}
 
-\item{t.diff}{Modeled reference-to-observation interval when `steady = FALSE`.
-Must equal `t.label`; the reference represents RNA at labeling onset.}
+\item{t.diff}{Modeled reference-to-observation interval when \code{steady = FALSE}.
+Must equal \code{t.label}; the reference represents RNA at labeling onset.}
 
 \item{h5_path}{Path to the HDF5 gene-profile file.}
 
@@ -45,7 +45,7 @@ Must equal `t.label`; the reference represents RNA at labeling onset.}
 
 \item{seed}{Random-number seed used for Laplace draws.}
 
-\item{truth_suffix}{Optional suffix for truth columns in `GeneInfo(data)`.}
+\item{truth_suffix}{Optional suffix for truth columns in \code{GeneInfo(data)}.}
 
 \item{add_pit}{Whether to append truth and PIT columns when available.}
 
@@ -65,4 +65,23 @@ See fit_gene().
 This is analogous to fit_gene(), but does not read an HDF5 profile.
 Each positive-count cell's Beta(alpha,beta) approximation is converted into
 a relative negative-log profile over possible new counts.
+}
+\details{
+This route uses the \code{alpha} and \code{beta} slots of the same genes and cells as
+the count data. It approximates labeling uncertainty and is distinct from
+the discrete-likelihood route in \code{fit_gene()}. \code{h5_path} is not required.
+}
+\examples{
+\dontrun{
+# d must contain per-cell alpha and beta slots.
+fit <- fit_gene_beta(
+  data = d, gene = "gene_A", fit.cond = "sim", t.label = 1,
+  steady = TRUE, ndraw = 2000, seed = 1
+)
+fit[, c("gene", "km_hat", "B_hat", "d_hat", "id_flag")]
+}
+
+}
+\seealso{
+\code{fit_gene()}, \code{fit_gene_MAP()}, \code{SimulateReads()}
 }

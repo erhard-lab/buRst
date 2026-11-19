@@ -31,9 +31,9 @@ burst_pmf_total(
 
 \item{init}{If steady=FALSE, initial distribution for old pool at t=0.}
 
-\item{N}{Initial or fixed truncation/support size.}
+\item{N}{Optional initial FFT support size; tail checks may enlarge it.}
 
-\item{eps_tail}{Tail-probability tolerance used to determine whether the support is sufficiently large.}
+\item{eps_tail}{Threshold for the mass in the upper tail-proxy bins.}
 
 \item{tail_bins}{Number of bins at the upper end of the support used to assess remaining tail mass.}
 
@@ -46,4 +46,26 @@ data.frame(k, prob, type).
 }
 \description{
 PMF of total RNA at t_end (old + new)
+}
+\details{
+The total RNA distribution is the convolution of surviving old RNA and
+newly synthesized RNA. For \code{steady = FALSE}, \code{init} supplies the reference
+count distribution at the beginning of the interval. Rates and durations
+must use consistent time units.
+}
+\examples{
+# A steady-state population retains its mean during labeling.
+p <- burst_pmf_total(t_end = 1, km = 1, B = 2, d = 0.5)
+sum(p$k * p$prob)  # Approximately km * B / d = 4
+
+# A transient population starting with four molecules per cell.
+p_transient <- burst_pmf_total(
+  t_end = 1, km = 2, B = 2, d = 0.5, steady = FALSE,
+  init = data.frame(k = 4, prob = 1)
+)
+sum(p_transient$k * p_transient$prob)
+
+}
+\seealso{
+\code{burst_pmf_new()}, \code{burst_pmf_old()}, \code{simulate_distr_total()}
 }
