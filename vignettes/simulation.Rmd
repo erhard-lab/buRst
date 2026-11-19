@@ -17,12 +17,12 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       fig.width = 7, fig.height = 4.5, fig.align = "center")
 ```
 
-<nav class="tutorial-nav" aria-label="buRst vignettes">
-<a href="bursting_same_mean.html">Count distributions</a>
-<a href="simulation.html" aria-current="page">Simulate counts</a>
-<a href="acute_pertubation.html">Acute perturbation</a>
-<a href="inference.html">Fit scSLAM-seq data</a>
-</nav>
+<!-- <nav class="tutorial-nav" aria-label="buRst vignettes"> -->
+<!-- <a href="bursting_same_mean.html">Count distributions</a> -->
+<!-- <a href="simulation.html" aria-current="page">Simulate counts</a> -->
+<!-- <a href="acute_pertubation.html">Acute perturbation</a> -->
+<!-- <a href="inference.html">Fit scSLAM-seq data</a> -->
+<!-- </nav> -->
 
 Create two synthetic genes with the same expected RNA abundance, sample old and
 new molecules, and use the sampled population to initialize a perturbation. You

@@ -1,6 +1,6 @@
 Package: buRst
 Type: Package
-Title: Inferring Transcriptional Bursting Dynamics from scSLAM-seq Data
+Title: Inferring transcriptional bursting dynamics from single-cell metabolic RNA-labeling data
 Version: 0.1.1
 Authors@R: c(
     person("Teresa", "Rummel", email = "teresa.rummel@ur.de", role = c("aut", "cre")),
@@ -13,7 +13,7 @@ Description: Likelihood-based inference of transcriptional burst frequency,
     in newly synthesized RNA measurements. Supports steady-state and
     transient models, simulation of RNA counts and labeling evidence,
     and posterior-based comparisons of kinetic changes between conditions.
-URL: https://github.com/erhard-lab/buRst
+URL: https://burst.erhard-lab.de/, https://github.com/erhard-lab/buRst
 BugReports: https://github.com/erhard-lab/buRst/issues
 License: Apache License (>= 2)
 Encoding: UTF-8

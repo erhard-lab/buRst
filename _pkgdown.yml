@@ -1,0 +1,108 @@
+url: https://burst.erhard-lab.de/
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+lang: en
+
+navbar:
+  title: "buRst"
+
+  structure:
+    left: [home, vignettes, reference]
+    right: [search, github]
+
+  components:
+    home:
+      text: "Home"
+      href: index.html
+
+    vignettes:
+      text: "Vignettes"
+      menu:
+        - text: "Getting Started: Inference"
+          href: articles/inference.html
+
+        - text: "Simulation"
+          href: articles/simulation.html
+
+        - text: "Same Mean, Different Bursts"
+          href: articles/bursting_same_mean.html
+
+        - text: "Acute Perturbation"
+          href: articles/acute_pertubation.html
+
+    reference:
+      text: "Reference"
+      href: reference/index.html
+
+    news:
+      text: "News"
+      href: news/index.html
+
+    github:
+      icon: fa-github
+      href: https://github.com/erhard-lab/buRst
+      aria-label: GitHub
+reference:
+  - title: "RNA Distributions"
+    desc: >
+      Compute RNA count distributions and explore
+      transcriptional bursting models.
+    contents:
+      - burst_pmf_new
+      - burst_pmf_old
+      - burst_pmf_total
+      - burst_pmf_fft
+      - gmRNA_new
+      - gmRNA_old
+      - gmRNA_total
+
+  - title: "Parameter Inference"
+    desc: >
+      Estimate transcriptional bursting parameters
+      from RNA count and labeling data.
+    contents:
+      - fit_gene
+      - fit_gene_MAP
+      - fit_gene_beta
+      - fit_gene_truth
+      - fit_d
+      - initial_params_noss
+
+  - title: "Posterior Comparisons"
+    desc: >
+      Compare inferred kinetic parameters
+      between experimental conditions.
+    contents:
+      - compare_posteriors_gate_star_kmB
+
+  - title: "Batch Analysis"
+    desc: >
+      Run parameter inference across genes and cells.
+    contents:
+      - run_kinetics_batch
+      - run_kinetics_batch_stat
+      - run_kinetics_fits
+
+  - title: "Simulation"
+    desc: >
+      Simulate RNA counts and metabolic labeling
+      under transcriptional bursting models.
+    contents:
+      - simulateBursting
+      - simulate_distr_new
+      - simulate_distr_old
+      - simulate_distr_total
+      - SimulateReads
+
+  - title: "Data Handling"
+    desc: >
+      Prepare, merge, import and export data
+      for simulation and inference workflows.
+    contents:
+      - merge_targets_dirs
+      - simulation_files
+      - simulation_to_grandR
+      - write_10x_reference

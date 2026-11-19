@@ -1,6 +1,6 @@
 # buRst <a href="https://github.com/erhard-lab/buRst"><img src="man/figures/logo.png" align="right" height="138" alt="buRst logo" /></a>
 
-**Infer transcriptional bursting dynamics from single-cell metabolic RNA-labeling data.**
+**Inferring transcriptional bursting dynamics from single-cell metabolic RNA-labeling data.**
 
 buRst combines per-cell labeling likelihoods with mechanistic RNA count
 distributions to infer burst frequency, burst size and RNA degradation rates.

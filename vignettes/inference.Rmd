@@ -17,12 +17,12 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       fig.width = 7, fig.height = 5, fig.align = "center")
 ```
 
-<nav class="tutorial-nav" aria-label="buRst vignettes">
-<a href="bursting_same_mean.html">Count distributions</a>
-<a href="simulation.html">Simulate counts</a>
-<a href="acute_pertubation.html">Acute perturbation</a>
-<a href="inference.html" aria-current="page">Fit scSLAM-seq data</a>
-</nav>
+<!-- <nav class="tutorial-nav" aria-label="buRst vignettes"> -->
+<!-- <a href="bursting_same_mean.html">Count distributions</a> -->
+<!-- <a href="simulation.html">Simulate counts</a> -->
+<!-- <a href="acute_pertubation.html">Acute perturbation</a> -->
+<!-- <a href="inference.html" aria-current="page">Fit scSLAM-seq data</a> -->
+<!-- </nav> -->
 
 Start with processed GRAND3 counts and their matching discrete labeling
 likelihoods. This example uses a two-hour sci-fate contrast to estimate

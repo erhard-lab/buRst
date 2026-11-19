@@ -1,6 +1,6 @@
 ---
 title: "Find the mechanism of an acute perturbation"
-subtitle: "A worked experiment from simulated counts to an interpretation"
+subtitle: "A step by step analysis: From simulated counts to an interpretation"
 output:
   rmarkdown::html_vignette:
     toc: true
@@ -20,12 +20,12 @@ knitr::opts_chunk$set(
 )
 ```
 
-<nav class="tutorial-nav" aria-label="buRst vignettes">
-<a href="bursting_same_mean.html">Count distributions</a>
-<a href="simulation.html">Simulate counts</a>
-<a href="acute_pertubation.html" aria-current="page">Acute perturbation</a>
-<a href="inference.html">Fit scSLAM-seq data</a>
-</nav>
+<!-- <nav class="tutorial-nav" aria-label="buRst vignettes"> -->
+<!-- <a href="bursting_same_mean.html">Count distributions</a> -->
+<!-- <a href="simulation.html">Simulate counts</a> -->
+<!-- <a href="acute_pertubation.html" aria-current="page">Acute perturbation</a> -->
+<!-- <a href="inference.html">Fit scSLAM-seq data</a> -->
+<!-- </nav> -->
 
 Two simulated genes double their RNA synthesis after a perturbation. One
 doubles burst frequency and the other doubles burst size. A third gene changes

@@ -22,12 +22,12 @@ knitr::opts_chunk$set(
 )
 ```
 
-<nav class="tutorial-nav" aria-label="buRst vignettes">
-<a href="bursting_same_mean.html" aria-current="page">Count distributions</a>
-<a href="simulation.html">Simulate counts</a>
-<a href="acute_pertubation.html">Acute perturbation</a>
-<a href="inference.html">Fit scSLAM-seq data</a>
-</nav>
+<!-- <nav class="tutorial-nav" aria-label="buRst vignettes"> -->
+<!-- <a href="bursting_same_mean.html" aria-current="page">Count distributions</a> -->
+<!-- <a href="simulation.html">Simulate counts</a> -->
+<!-- <a href="acute_pertubation.html">Acute perturbation</a> -->
+<!-- <a href="inference.html">Fit scSLAM-seq data</a> -->
+<!-- </nav> -->
 
 Two genes average four RNA molecules per cell. One produces frequent small
 bursts and the other produces rare large bursts. In this guide, you'll calculate
