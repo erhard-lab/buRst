@@ -8,3 +8,5 @@
 ^docs$
 ^pkgdown$
 ^index\.md$
+^CRAN-SUBMISSION$
+^LICENSE\.md$
